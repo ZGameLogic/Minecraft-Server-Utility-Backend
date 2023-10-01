@@ -7,7 +7,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {
+        "com.zgamelogic.controllers"
+})
 @EnableScheduling
 public class Main {
     public static void main(String[] args) {
