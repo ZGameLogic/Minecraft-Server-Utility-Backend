@@ -2,14 +2,11 @@ package com.zgamelogic.data.database.user;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.Getter;
-import lombok.ToString;
 
 import java.util.LinkedList;
 import java.util.List;
 
-@Getter
-@ToString
+@Data
 @Entity
 @Table(name = "msu_users")
 public class User {
@@ -21,9 +18,8 @@ public class User {
     @Embedded
     private UserSession session;
 
-    @ElementCollection
-    @CollectionTable(name="user_permissions")
-    private LinkedList<String> permissions;
+    @ElementCollection(fetch = FetchType.EAGER)
+    private List<String> permissions;
 
     public void addPermission(String...permission){
         if(permissions == null) permissions = new LinkedList<>();
