@@ -13,5 +13,5 @@ import java.util.Date;
 @Embeddable
 public class UserSession {
     private String sessionToken;
-    private Date expires;
+    private Date tokenExpires;
 }

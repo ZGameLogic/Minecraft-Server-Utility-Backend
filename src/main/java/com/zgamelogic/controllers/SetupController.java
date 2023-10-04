@@ -5,6 +5,7 @@ import com.zgamelogic.data.database.user.UserRepository;
 import com.zgamelogic.data.setup.SetupItem;
 import com.zgamelogic.data.setup.SetupStatus;
 import com.zgamelogic.data.setup.SetupStatusWithError;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,7 @@ import org.springframework.web.context.request.WebRequest;
 
 @RestController
 @RequestMapping("setup")
+@Slf4j
 public class SetupController {
 
     private final ConfigurationItemRepository configurationItemRepository;

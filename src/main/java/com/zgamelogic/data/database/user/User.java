@@ -3,6 +3,7 @@ package com.zgamelogic.data.database.user;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -14,6 +15,7 @@ public class User {
     @Id
     private String username;
     private String password;
+    private Date lastLoggedIn;
 
     @Embedded
     private UserSession session;
