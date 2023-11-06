@@ -9,7 +9,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @SpringBootApplication(scanBasePackages = {
         "com.zgamelogic.controllers",
-        "com.zgamelogic.data.database"
+        "com.zgamelogic.data.database",
+        "com.zgamelogic.configurations"
 })
 @EnableScheduling
 public class Main {
