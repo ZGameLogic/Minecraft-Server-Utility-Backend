@@ -1,10 +1,10 @@
 package com.zgamelogic.controllers;
 
-import com.zgamelogic.data.database.configuration.ConfigurationItemRepository;
+import com.zgamelogic.data.database.user.User;
 import com.zgamelogic.data.database.user.UserRepository;
-import com.zgamelogic.data.setup.SetupItem;
-import com.zgamelogic.data.setup.SetupStatus;
-import com.zgamelogic.data.setup.SetupStatusWithError;
+import com.zgamelogic.data.services.setup.SetupItem;
+import com.zgamelogic.data.services.setup.SetupStatus;
+import com.zgamelogic.data.services.setup.SetupStatusWithError;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -16,42 +16,36 @@ import org.springframework.web.context.request.WebRequest;
 @Slf4j
 public class SetupController {
 
-    private final ConfigurationItemRepository configurationItemRepository;
     private final UserRepository userRepository;
 
     @Autowired
-    public SetupController(ConfigurationItemRepository configurationItemRepository, UserRepository userRepository) {
-        this.configurationItemRepository = configurationItemRepository;
+    public SetupController(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
     @GetMapping("status")
     private SetupStatus status(){
-        return new SetupStatus(
-            configurationItemRepository.existsById("website port"),
-            configurationItemRepository.existsById("initial user"),
-            configurationItemRepository.existsById("initial pass")
-        );
+        return new SetupStatus(userRepository.count() > 0);
     }
 
-    @PostMapping("value")
+    @PostMapping
     private SetupStatus setValue(@RequestBody SetupItem item){
-        System.out.println(item);
-        return new SetupStatus(
-            configurationItemRepository.existsById("website port"),
-            configurationItemRepository.existsById("initial user"),
-            configurationItemRepository.existsById("initial pass")
-        );
+        boolean setup = userRepository.count() > 0;
+        if(setup){
+            return new SetupStatusWithError(
+                    setup,
+                    "Initial user already setup. This endpoint is now useless"
+            );
+        }
+        userRepository.save(new User(item.username(), item.password()));
+        return new SetupStatus(userRepository.count() > 0);
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class})
     private SetupStatusWithError exceptionHandler(RuntimeException ex, WebRequest request){
-        String message = "Unable to process JSON body. Needs keys: name, value";
         return new SetupStatusWithError(
-                configurationItemRepository.existsById("website port"),
-                configurationItemRepository.existsById("initial user"),
-                configurationItemRepository.existsById("initial pass"),
-                message
+                userRepository.count() > 0,
+                "Unable to process JSON body. Needs keys: username, password"
         );
     }
 }

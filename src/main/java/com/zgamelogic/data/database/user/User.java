@@ -2,6 +2,7 @@ package com.zgamelogic.data.database.user;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Date;
 import java.util.LinkedList;
@@ -9,6 +10,7 @@ import java.util.List;
 
 @Data
 @Entity
+@NoArgsConstructor
 @Table(name = "msu_users")
 public class User {
 
@@ -17,11 +19,13 @@ public class User {
     private String password;
     private Date lastLoggedIn;
 
-    @Embedded
-    private UserSession session;
-
     @ElementCollection(fetch = FetchType.EAGER)
     private List<String> permissions;
+
+    public User(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
 
     public void addPermission(String...permission){
         if(permissions == null) permissions = new LinkedList<>();
