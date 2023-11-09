@@ -1,15 +1,13 @@
 package com.zgamelogic.data.services.minecraft;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.HashMap;
 import java.util.Scanner;
 
@@ -22,6 +20,15 @@ public class MinecraftServer {
     private String name;
     private HashMap<String, String> serverProperties;
     private MinecraftServerConfig serverConfig;
+
+    @JsonIgnore
+    private Process serverProcess;
+    @JsonIgnore
+    private BufferedReader processOutput;
+    @JsonIgnore
+    private BufferedReader processErrorOutput;
+    @JsonIgnore
+    private PrintStream processInput;
 
     public MinecraftServer(File serverDir){
         filePath = serverDir.getPath();
@@ -37,7 +44,37 @@ public class MinecraftServer {
     }
 
     public void startServer(){
+        status = "Starting";
+        log.info("Starting " + name);
+        ProcessBuilder pb = new ProcessBuilder();
+        pb.directory(new File(filePath));
+        pb.command(serverConfig.getStartCommand().split(" "));
+        try {
+            serverProcess = pb.start();
+            processOutput = new BufferedReader(new InputStreamReader(serverProcess.getInputStream()));
+            processErrorOutput = new BufferedReader(new InputStreamReader(serverProcess.getErrorStream()));
+            processInput = new PrintStream(serverProcess.getOutputStream());
+            serverWatch();
+        } catch (IOException e) {
+            log.error("Unable to start server process", e);
+        }
+    }
 
+    public void stopServer(){
+        status = "Stopping";
+    }
+
+    private void serverWatch(){
+        new Thread(() -> {
+            while(serverProcess.isAlive()){
+                try {
+                    String line = processOutput.readLine();
+                    if(line == null) continue;
+                    log.info(line);
+                    // TODO process line
+                } catch (IOException ignored) {}
+            }
+        }, name + " output").start();
     }
 
     public void setAutoStart(boolean autoStart){

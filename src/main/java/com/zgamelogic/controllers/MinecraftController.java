@@ -25,7 +25,6 @@ public class MinecraftController {
         servers = new LinkedList<>();
         for(File server: SERVER_DIR.listFiles()){
             servers.add(new MinecraftServer(server));
-            servers.getLast().setAutoStart(false);
         }
         log.info("Starting minecraft auto-start servers...");
         servers.stream().filter(mcServer -> mcServer.getServerConfig().isAutoStart())
