@@ -3,6 +3,7 @@ package com.zgamelogic.data.services.minecraft;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.zgamelogic.data.minecraft.MinecraftServerMessageAction;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,9 +32,12 @@ public class MinecraftServer {
     private BufferedReader processErrorOutput;
     @JsonIgnore
     private PrintStream processInput;
+    @JsonIgnore
+    private MinecraftServerMessageAction messageAction;
 
-    public MinecraftServer(File serverDir){
+    public MinecraftServer(File serverDir, MinecraftServerMessageAction messageAction){
         filePath = serverDir.getPath();
+        this.messageAction = messageAction;
         status = MC_SERVER_OFFLINE;
         serverProperties = new HashMap<>();
         loadServerProperties();
@@ -115,6 +119,7 @@ public class MinecraftServer {
                     } else if(line.contains("Stopping server")){
                         status = MC_SERVER_STOPPING;
                     }
+                    messageAction.action(name, line);
                 } catch (IOException ignored) {}
             }
             if(status.equals(MC_SERVER_STOPPING)){

@@ -4,8 +4,10 @@ import com.zgamelogic.data.services.Greeting;
 import com.zgamelogic.data.services.HelloMessage;
 import com.zgamelogic.data.services.minecraft.MinecraftServer;
 import com.zgamelogic.data.services.minecraft.MinecraftServerStatusCommand;
+import com.zgamelogic.data.services.minecraft.MinecraftSocketMessage;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,15 +26,24 @@ public class MinecraftController {
     private final static File SERVER_DIR = new File("data/servers");
     private final HashMap<String, MinecraftServer> servers;
 
-    private MinecraftController(){
+    private final WebSocketService webSocketService;
+
+    @Autowired
+    private MinecraftController(WebSocketService webSocketService){
+        this.webSocketService = webSocketService;
         if(!SERVER_DIR.exists()) SERVER_DIR.mkdirs();
         servers = new HashMap<>();
         for(File server: SERVER_DIR.listFiles()){
-            servers.put(server.getName(), new MinecraftServer(server));
+            servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction));
         }
         log.info("Starting minecraft auto-start servers...");
         servers.values().stream().filter(mcServer -> mcServer.getServerConfig().isAutoStart())
                 .forEach(MinecraftServer::startServer);
+    }
+
+    private void serverMessageAction(String name, String line){
+        MinecraftSocketMessage msm = new MinecraftSocketMessage("log", name, line);
+        webSocketService.sendMessage("/server/message", msm);
     }
 
     @GetMapping("servers")
