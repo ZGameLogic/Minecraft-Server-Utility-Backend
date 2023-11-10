@@ -11,6 +11,8 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Scanner;
 
+import static com.zgamelogic.data.Constants.*;
+
 @NoArgsConstructor
 @Slf4j
 @Data
@@ -32,7 +34,7 @@ public class MinecraftServer {
 
     public MinecraftServer(File serverDir){
         filePath = serverDir.getPath();
-        status = "offline";
+        status = MC_SERVER_OFFLINE;
         serverProperties = new HashMap<>();
         loadServerProperties();
         loadServerConfig();
@@ -44,7 +46,7 @@ public class MinecraftServer {
     }
 
     public void startServer(){
-        status = "Starting";
+        status = MC_SERVER_STARTING;
         log.info("Starting " + name);
         ProcessBuilder pb = new ProcessBuilder();
         pb.directory(new File(filePath));
@@ -61,24 +63,25 @@ public class MinecraftServer {
     }
 
     public void stopServer(){
-        status = "Stopping";
+        log.info("Stopping " + name);
+        status = MC_SERVER_STOPPING;
+        sendServerCommand("stop");
     }
 
-    private void serverWatch(){
+    public void restartServer() {
         new Thread(() -> {
-            while(serverProcess.isAlive()){
+            stopServer();
+            while(!status.equals(MC_SERVER_OFFLINE)) {
                 try {
-                    String line = processOutput.readLine();
-                    if(line == null) continue;
-                    log.info(line);
-                    // TODO process line
-                } catch (IOException ignored) {}
+                    Thread.sleep(250);
+                } catch (InterruptedException ignored) {}
             }
-        }, name + " output").start();
+            startServer();
+        }, "restart").start();
     }
 
-    public void setAutoStart(boolean autoStart){
-        serverConfig.setAutoStart(autoStart);
+    public void setServerConfig(MinecraftServerConfig config){
+        serverConfig = config;
         saveServerConfig();
     }
 
@@ -93,6 +96,33 @@ public class MinecraftServer {
             out.close();
         } catch (FileNotFoundException ignored) {}
         loadServerProperties();
+    }
+
+    public void sendServerCommand(String command){
+        processInput.println(command);
+        processInput.flush();
+    }
+
+    private void serverWatch(){
+        new Thread(() -> {
+            while(serverProcess.isAlive()){
+                try {
+                    String line = processOutput.readLine();
+                    if(line == null) continue;
+                    log.debug(line);
+                    if(line.contains("]: Done (")){
+                        status = MC_SERVER_ONLINE;
+                    } else if(line.contains("Stopping server")){
+                        status = MC_SERVER_STOPPING;
+                    }
+                } catch (IOException ignored) {}
+            }
+            if(status.equals(MC_SERVER_STOPPING)){
+                status = MC_SERVER_OFFLINE;
+            } else {
+                status = MC_SERVER_CRASHED;
+            }
+        }, name + " watch").start();
     }
 
     private void loadServerProperties(){
