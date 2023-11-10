@@ -1,10 +1,9 @@
 package com.zgamelogic.controllers;
 
-import com.zgamelogic.data.services.Greeting;
-import com.zgamelogic.data.services.HelloMessage;
 import com.zgamelogic.data.services.minecraft.MinecraftServer;
 import com.zgamelogic.data.services.minecraft.MinecraftServerStatusCommand;
 import com.zgamelogic.data.services.minecraft.MinecraftSocketMessage;
+import com.zgamelogic.data.services.minecraft.MinecraftWebsocketDataRequest;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
+
+import static com.zgamelogic.data.Constants.MC_SERVER_ONLINE;
 
 @Slf4j
 @RestController
@@ -69,9 +70,12 @@ public class MinecraftController {
 
     @MessageMapping("/hello")
     @SendTo("/server/message")
-    public Greeting greeting(HelloMessage message) {
-        log.info("Got a client message");
-        return new Greeting("Hello, " + message.getName() + "!");
+    public MinecraftServer greeting(MinecraftWebsocketDataRequest message) {
+        MinecraftServer server = servers.get(message.getServer());
+        if(server.getStatus().equals(MC_SERVER_ONLINE)){
+            //TODO return it with the players online
+        }
+        return server;
     }
 
     @PreDestroy
