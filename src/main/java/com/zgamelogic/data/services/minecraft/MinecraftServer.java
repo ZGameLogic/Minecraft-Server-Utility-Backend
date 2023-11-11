@@ -107,6 +107,30 @@ public class MinecraftServer {
         processInput.flush();
     }
 
+    public void updateServer(String download){
+        if(status.equals(MC_SERVER_ONLINE)) stopServer();
+        blockThreadUntilOffline();
+        status = MC_SERVER_UPDATING;
+        new Thread(() -> {
+            ProcessBuilder pb = new ProcessBuilder();
+            pb.directory(new File(filePath));
+            pb.command(serverConfig.getUpdateScript());
+            try {
+                Process update = pb.start();
+                while(update.isAlive()){
+                    Thread.sleep(250);
+                }
+            } catch (IOException | InterruptedException ignored) {}
+            status = MC_SERVER_OFFLINE;
+        }, "Update").start();
+        blockThreadUntilOffline();
+        if(getServerConfig().isAutoStart()){
+            startServer();
+        } else {
+            status = MC_SERVER_OFFLINE;
+        }
+    }
+
     private void serverWatch(){
         new Thread(() -> {
             while(serverProcess.isAlive()){
@@ -165,6 +189,14 @@ public class MinecraftServer {
             ow.writeValue(config, serverConfig);
         } catch (IOException e) {
             log.error("Unable to write server config", e);
+        }
+    }
+
+    private void blockThreadUntilOffline(){
+        while(!status.equals(MC_SERVER_OFFLINE)) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ignored) {}
         }
     }
 }

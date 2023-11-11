@@ -1,7 +1,11 @@
 package com.zgamelogic.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zgamelogic.data.database.curseforge.CurseforgeProject;
 import com.zgamelogic.data.services.minecraft.MinecraftServerPingData;
+import com.zgamelogic.data.services.minecraft.MinecraftServerVersion;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -9,13 +13,52 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
-public abstract class MCServerService {
+public abstract class MinecraftService {
 
-    public static final byte PACKET_HANDSHAKE = 0x00, PACKET_STATUSREQUEST = 0x00, PACKET_PING = 0x01;
-    public static final int STATUS_HANDSHAKE = 1;
+    public static HashMap<String, LinkedList<MinecraftServerVersion>> getMinecraftServerVersions(String curseforgeToken, List<CurseforgeProject> projects){
+        HashMap<String, LinkedList<MinecraftServerVersion>> versions = new HashMap<>();
+        LinkedList<MinecraftServerVersion> vanillaVersions = new LinkedList<>();
+        try {
+            Document doc = Jsoup.connect("https://mcversions.net").get();
+            LinkedList<Thread> threads = new LinkedList<>();
+            doc.getElementsByClass("ncItem").forEach(element -> {
+                String id = element.id();
+                if(id.toLowerCase().contains("w") || id.toLowerCase().contains("pre") || id.toLowerCase().contains("rc")) return;
+                String downloadPage = element.select("a").get(0).absUrl("href");
+                    threads.add(new Thread(() -> {
+                        try {
+                            Document downloadDoc = Jsoup.connect(downloadPage).get();
+                            String downloadServerLink = downloadDoc.select("a:contains(Download Server Jar)").get(0).select("a").get(0).absUrl("href");
+                            synchronized (vanillaVersions){
+                                vanillaVersions.add(new MinecraftServerVersion(id, downloadServerLink));
+                            }
+                        } catch (IOException | IndexOutOfBoundsException ignored) {}
+                    }));
+                    threads.getLast().start();
+            });
+            while(!threads.isEmpty()) threads.removeIf(thread -> !thread.isAlive());
+        } catch (IOException ignored) {}
+        Collections.sort(vanillaVersions);
+        versions.put("vanilla", vanillaVersions);
+
+        projects.forEach(project -> {
+            LinkedList<MinecraftServerVersion> projectVersions = new LinkedList<>();
+
+            Collections.sort(projectVersions);
+            versions.put(project.getName(), projectVersions);
+        });
+
+        return versions;
+    }
 
     public static MinecraftServerPingData pingServer(String url, int port){
+        final byte PACKET_HANDSHAKE = 0x00, PACKET_STATUSREQUEST = 0x00, PACKET_PING = 0x01;
+        final int STATUS_HANDSHAKE = 1;
 
         int tries = 0;
         while(tries < 3) {
