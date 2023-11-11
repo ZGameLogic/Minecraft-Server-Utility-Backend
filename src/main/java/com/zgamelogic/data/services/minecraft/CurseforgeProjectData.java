@@ -7,8 +7,6 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class MinecraftServerUpdateCommand {
-    private String server;
-    private String category;
-    private String version;
+public class CurseforgeProjectData {
+    private long projectId;
 }

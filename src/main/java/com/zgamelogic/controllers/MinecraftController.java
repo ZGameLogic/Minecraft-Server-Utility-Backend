@@ -1,8 +1,12 @@
 package com.zgamelogic.controllers;
 
+import com.zgamelogic.data.database.curseforge.CurseforgeProject;
 import com.zgamelogic.data.database.curseforge.CurseforgeProjectRepository;
+import com.zgamelogic.data.services.curseforge.CurseforgeMod;
 import com.zgamelogic.data.services.minecraft.*;
+import com.zgamelogic.services.CurseforgeService;
 import com.zgamelogic.services.MinecraftService;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,16 +50,25 @@ public class MinecraftController {
         serverVersions = new HashMap<>();
         servers = new HashMap<>();
         for(File server: SERVER_DIR.listFiles()){
-            servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction));
+            servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction));
         }
         log.info("Starting minecraft auto-start servers...");
         servers.values().stream().filter(mcServer -> mcServer.getServerConfig().isAutoStart())
                 .forEach(MinecraftServer::startServer);
+    }
+
+    @PostConstruct
+    private void postConstruct(){
         updateServerVersions();
     }
 
     private void serverMessageAction(String name, String line){
         MinecraftSocketMessage msm = new MinecraftSocketMessage("log", name, line);
+        webSocketService.sendMessage("/server/message", msm);
+    }
+
+    private void serverStatusAction(String name, String status){
+        MinecraftSocketMessage msm = new MinecraftSocketMessage("status", name, status);
         webSocketService.sendMessage("/server/message", msm);
     }
 
@@ -85,9 +98,28 @@ public class MinecraftController {
         }
     }
 
+    @PostMapping("servers/create")
+    private void createServer(){
+        // TODO implement
+    }
+
     @PostMapping("servers/update")
     private void updateServer(@RequestBody MinecraftServerUpdateCommand updateCommand){
+        servers.get(updateCommand.getServer()).updateServer(serverVersions.get(updateCommand.getCategory()).stream().filter(
+                version -> version.getVersion().equals(updateCommand.getVersion())
+        ).findFirst().get().getUrl());
+    }
 
+    @GetMapping("curseforge/project")
+    private CurseforgeMod getCurseforgeProject(@RequestBody CurseforgeProjectData data){
+        return CurseforgeService.getCurseforgeMod(curseforgeToken, data.getProjectId());
+    }
+
+    @PostMapping("curseforge/project")
+    private void addCurseforgeProject(@RequestBody CurseforgeProjectData data){
+        CurseforgeMod project = CurseforgeService.getCurseforgeMod(curseforgeToken, data.getProjectId());
+        curseforgeProjectRepository.save(new CurseforgeProject(data.getProjectId(), project.getName()));
+        updateServerVersions();
     }
 
     @MessageMapping("/hello")

@@ -2,6 +2,7 @@ package com.zgamelogic.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zgamelogic.data.database.curseforge.CurseforgeProject;
+import com.zgamelogic.data.services.curseforge.CurseforgeMod;
 import com.zgamelogic.data.services.minecraft.MinecraftServerPingData;
 import com.zgamelogic.data.services.minecraft.MinecraftServerVersion;
 import org.jsoup.Jsoup;
@@ -48,8 +49,9 @@ public abstract class MinecraftService {
 
         projects.forEach(project -> {
             LinkedList<MinecraftServerVersion> projectVersions = new LinkedList<>();
-
-            Collections.sort(projectVersions);
+            CurseforgeMod mod = CurseforgeService.getCurseforgeMod(curseforgeToken, project.getId());
+            if(mod.getServerFileName() == null || mod.getServerFileUrl() == null) return;
+            projectVersions.add(new MinecraftServerVersion(mod.getServerFileName(), mod.getServerFileUrl()));
             versions.put(project.getName(), projectVersions);
         });
 

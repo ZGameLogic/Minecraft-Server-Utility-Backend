@@ -3,7 +3,7 @@ package com.zgamelogic.data.services.minecraft;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.zgamelogic.data.minecraft.MinecraftServerMessageAction;
+import com.zgamelogic.data.minecraft.MinecraftServerSocketAction;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,11 +33,14 @@ public class MinecraftServer {
     @JsonIgnore
     private PrintStream processInput;
     @JsonIgnore
-    private MinecraftServerMessageAction messageAction;
+    private MinecraftServerSocketAction messageAction;
+    @JsonIgnore
+    private MinecraftServerSocketAction statusAction;
 
-    public MinecraftServer(File serverDir, MinecraftServerMessageAction messageAction){
+    public MinecraftServer(File serverDir, MinecraftServerSocketAction messageAction, MinecraftServerSocketAction statusAction){
         filePath = serverDir.getPath();
         this.messageAction = messageAction;
+        this.statusAction = statusAction;
         status = MC_SERVER_OFFLINE;
         serverProperties = new HashMap<>();
         loadServerProperties();
@@ -112,6 +115,7 @@ public class MinecraftServer {
         blockThreadUntilOffline();
         status = MC_SERVER_UPDATING;
         new Thread(() -> {
+            // TODO download file
             ProcessBuilder pb = new ProcessBuilder();
             pb.directory(new File(filePath));
             pb.command(serverConfig.getUpdateScript());
@@ -152,6 +156,17 @@ public class MinecraftServer {
                 status = MC_SERVER_CRASHED;
             }
         }, name + " watch").start();
+        new Thread(() -> {
+            String currentStatus = status;
+            while(true){
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {}
+                if(currentStatus.equals(status)) continue;
+                currentStatus = status;
+                statusAction.action(name, status);
+            }
+        }, name + " status watch").start();
     }
 
     private void loadServerProperties(){

@@ -1,5 +1,5 @@
 package com.zgamelogic.data.minecraft;
 
-public interface MinecraftServerMessageAction {
+public interface MinecraftServerSocketAction {
     void action(String server, String line);
 }
