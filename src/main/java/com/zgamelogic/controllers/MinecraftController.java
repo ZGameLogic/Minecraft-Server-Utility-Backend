@@ -1,9 +1,7 @@
 package com.zgamelogic.controllers;
 
-import com.zgamelogic.data.services.minecraft.MinecraftServer;
-import com.zgamelogic.data.services.minecraft.MinecraftServerStatusCommand;
-import com.zgamelogic.data.services.minecraft.MinecraftSocketMessage;
-import com.zgamelogic.data.services.minecraft.MinecraftWebsocketDataRequest;
+import com.zgamelogic.data.services.minecraft.*;
+import com.zgamelogic.services.MCServerService;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,7 +71,8 @@ public class MinecraftController {
     public MinecraftServer greeting(MinecraftWebsocketDataRequest message) {
         MinecraftServer server = servers.get(message.getServer());
         if(server.getStatus().equals(MC_SERVER_ONLINE)){
-            //TODO return it with the players online
+            MinecraftServerPingData pingData = MCServerService.pingServer("localhost", Integer.parseInt(server.getServerProperties().get("server-port")));
+            return new MinecraftServerOnline(server, pingData);
         }
         return server;
     }
