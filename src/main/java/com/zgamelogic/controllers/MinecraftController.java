@@ -1,5 +1,7 @@
 package com.zgamelogic.controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.zgamelogic.data.database.curseforge.CurseforgeProject;
 import com.zgamelogic.data.database.curseforge.CurseforgeProjectRepository;
 import com.zgamelogic.data.services.curseforge.CurseforgeMod;
@@ -21,11 +23,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 
 import static com.zgamelogic.data.Constants.MC_SERVER_ONLINE;
+import static com.zgamelogic.services.MinecraftService.downloadServer;
 
 @Slf4j
 @RestController
@@ -35,9 +39,9 @@ public class MinecraftController {
     @Value("${curseforge.token}")
     private String curseforgeToken;
 
-    private final static File SERVER_DIR = new File("data/servers");
+    private final static File SERVERS_DIR = new File("data/servers");
     private final HashMap<String, MinecraftServer> servers;
-    private HashMap<String, LinkedList<MinecraftServerVersion>> serverVersions;
+    private HashMap<String, HashMap<String, MinecraftServerVersion>> serverVersions;
 
     private final WebSocketService webSocketService;
     private final CurseforgeProjectRepository curseforgeProjectRepository;
@@ -46,10 +50,10 @@ public class MinecraftController {
     private MinecraftController(WebSocketService webSocketService, CurseforgeProjectRepository curseforgeProjectRepository){
         this.webSocketService = webSocketService;
         this.curseforgeProjectRepository = curseforgeProjectRepository;
-        if(!SERVER_DIR.exists()) SERVER_DIR.mkdirs();
+        if(!SERVERS_DIR.exists()) SERVERS_DIR.mkdirs();
         serverVersions = new HashMap<>();
         servers = new HashMap<>();
-        for(File server: SERVER_DIR.listFiles()){
+        for(File server: SERVERS_DIR.listFiles()){
             servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction));
         }
         log.info("Starting minecraft auto-start servers...");
@@ -78,7 +82,7 @@ public class MinecraftController {
     }
 
     @GetMapping("/server/versions")
-    public HashMap<String, LinkedList<MinecraftServerVersion>> getMinecraftServerVersions(){
+    public HashMap<String, HashMap<String, MinecraftServerVersion>> getMinecraftServerVersions(){
         return serverVersions;
     }
 
@@ -99,15 +103,37 @@ public class MinecraftController {
     }
 
     @PostMapping("servers/create")
-    private void createServer(){
-        // TODO implement
+    private void createServer(@RequestBody MinecraftServerCreationData data){
+        MinecraftServerConfig config = new MinecraftServerConfig(data);
+        File serverDir = new File(SERVERS_DIR + "/" + data.getName());
+        serverDir.mkdirs();
+        try {
+            File eula = new File(serverDir.getPath() + "/eula.txt");
+            PrintWriter eulaPW = new PrintWriter(eula);
+            eulaPW.println("eula=true");
+            eulaPW.flush();
+            eulaPW.close();
+            File props = new File(serverDir.getPath() + "/server.properties");
+            PrintWriter propsPW = new PrintWriter(props);
+            propsPW.println("server-port=" + data.getPort());
+            propsPW.flush();
+            propsPW.close();
+            File configFile = new File(serverDir.getPath() + "/msu_config.json");
+            ObjectWriter ow = new ObjectMapper().writerWithDefaultPrettyPrinter();
+            ow.writeValue(configFile, config);
+        } catch (IOException ignored) {}
+        String download = serverVersions.get(data.getCategory()).get(data.getVersion()).getUrl();
+        downloadServer(serverDir, download);
+        servers.clear();
+        for(File server: SERVERS_DIR.listFiles()){
+            servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction));
+        }
+        if(config.isAutoStart()) servers.get(data.getName()).startServer();
     }
 
     @PostMapping("servers/update")
     private void updateServer(@RequestBody MinecraftServerUpdateCommand updateCommand){
-        servers.get(updateCommand.getServer()).updateServer(serverVersions.get(updateCommand.getCategory()).stream().filter(
-                version -> version.getVersion().equals(updateCommand.getVersion())
-        ).findFirst().get().getUrl());
+        servers.get(updateCommand.getServer()).updateServer(serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
     }
 
     @GetMapping("curseforge/project")

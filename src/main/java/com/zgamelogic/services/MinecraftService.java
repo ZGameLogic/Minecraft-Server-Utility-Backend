@@ -7,23 +7,25 @@ import com.zgamelogic.data.services.minecraft.MinecraftServerPingData;
 import com.zgamelogic.data.services.minecraft.MinecraftServerVersion;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.util.FileCopyUtils;
+import org.springframework.web.client.RestTemplate;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
 public abstract class MinecraftService {
 
-    public static HashMap<String, LinkedList<MinecraftServerVersion>> getMinecraftServerVersions(String curseforgeToken, List<CurseforgeProject> projects){
-        HashMap<String, LinkedList<MinecraftServerVersion>> versions = new HashMap<>();
-        LinkedList<MinecraftServerVersion> vanillaVersions = new LinkedList<>();
+    public static HashMap<String, HashMap<String, MinecraftServerVersion>> getMinecraftServerVersions(String curseforgeToken, List<CurseforgeProject> projects){
+        HashMap<String, HashMap<String, MinecraftServerVersion>> versions = new HashMap<>();
+        HashMap<String, MinecraftServerVersion> vanillaVersions = new HashMap<>();
         try {
             Document doc = Jsoup.connect("https://mcversions.net").get();
             LinkedList<Thread> threads = new LinkedList<>();
@@ -36,7 +38,7 @@ public abstract class MinecraftService {
                             Document downloadDoc = Jsoup.connect(downloadPage).get();
                             String downloadServerLink = downloadDoc.select("a:contains(Download Server Jar)").get(0).select("a").get(0).absUrl("href");
                             synchronized (vanillaVersions){
-                                vanillaVersions.add(new MinecraftServerVersion(id, downloadServerLink));
+                                vanillaVersions.put(id, new MinecraftServerVersion(id, downloadServerLink));
                             }
                         } catch (IOException | IndexOutOfBoundsException ignored) {}
                     }));
@@ -44,18 +46,29 @@ public abstract class MinecraftService {
             });
             while(!threads.isEmpty()) threads.removeIf(thread -> !thread.isAlive());
         } catch (IOException ignored) {}
-        Collections.sort(vanillaVersions);
         versions.put("vanilla", vanillaVersions);
 
         projects.forEach(project -> {
-            LinkedList<MinecraftServerVersion> projectVersions = new LinkedList<>();
+            HashMap<String, MinecraftServerVersion> projectVersions = new HashMap<>();
             CurseforgeMod mod = CurseforgeService.getCurseforgeMod(curseforgeToken, project.getId());
             if(mod.getServerFileName() == null || mod.getServerFileUrl() == null) return;
-            projectVersions.add(new MinecraftServerVersion(mod.getServerFileName(), mod.getServerFileUrl()));
+            projectVersions.put(mod.getServerFileName(), new MinecraftServerVersion(mod.getServerFileName(), mod.getServerFileUrl()));
             versions.put(project.getName(), projectVersions);
         });
 
         return versions;
+    }
+
+    public static void downloadServer(File dir, String link){
+        HttpHeaders headers = new HttpHeaders();
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        RestTemplate restTemplate = new RestTemplate();
+        restTemplate.execute(link, HttpMethod.GET, requestCallback -> {
+            requestCallback.getHeaders().setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        }, clientHttpResponse -> {
+            FileCopyUtils.copy(clientHttpResponse.getBody(), new FileOutputStream(dir.getPath() + "/server.jar"));
+            return null;
+        });
     }
 
     public static MinecraftServerPingData pingServer(String url, int port){

@@ -94,6 +94,11 @@ public class MinecraftServer {
 
     public void setServerProperty(String key, String value){
         File properties = new File(filePath + "/server.properties");
+        if(!properties.exists()) {
+            try {
+                properties.createNewFile();
+            } catch (IOException ignored) {}
+        }
         try {
             // output file
             PrintWriter out = new PrintWriter(properties);
