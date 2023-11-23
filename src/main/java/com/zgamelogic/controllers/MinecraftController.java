@@ -25,7 +25,9 @@ import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 
+import static com.zgamelogic.data.Constants.MC_SERVER_OFFLINE;
 import static com.zgamelogic.data.Constants.MC_SERVER_ONLINE;
 import static com.zgamelogic.services.MinecraftService.downloadServer;
 
@@ -79,32 +81,43 @@ public class MinecraftController {
         return servers.values();
     }
 
-    @GetMapping("server/ping/{server}")
-    private Collection<MinecraftServerPingData> getServerPing(@PathVariable(required = false) String server){
-        LinkedList<MinecraftServerPingData> data = new LinkedList<>();
+    @GetMapping({"/server/log/", "/server/log/{server}"})
+    private Map<String, MinecraftServerLog> getServerLog(@PathVariable(required = false) String server){
+        HashMap<String, MinecraftServerLog> data = new HashMap<>();
+        LinkedList<MinecraftServer> servers = new LinkedList<>();
+        if(server != null){
+            servers.add(this.servers.get(server));
+        } else {
+            servers.addAll(this.servers.values());
+        }
+        servers.removeIf(s -> !s.getStatus().equals(MC_SERVER_OFFLINE));
+        servers.forEach(s -> data.put(s.getName(), s.loadLog()));
+        return data;
+    }
+
+    @GetMapping({"/server/ping/", "/server/ping/{server}"})
+    private Map<String, MinecraftServerPingData> getServerPing(@PathVariable(required = false) String server){
+        HashMap<String, MinecraftServerPingData> data = new HashMap<>();
         if(server != null){
             MinecraftServer minecraftServer = servers.get(server);
             if(minecraftServer.getStatus().equals(MC_SERVER_ONLINE)) {
                 int port = Integer.parseInt(minecraftServer.getServerProperties().get("server-port"));
                 String address = "zgamelogic.com";
-                data.add(MinecraftService.pingServer(address, port));
+                data.put(minecraftServer.getName(), MinecraftService.pingServer(address, port));
             }
         } else {
             servers.forEach((key, minecraftServer) -> {
                 if(minecraftServer.getStatus().equals(MC_SERVER_ONLINE)) {
                     int port = Integer.parseInt(minecraftServer.getServerProperties().get("server-port"));
                     String address = "zgamelogic.com";
-                    data.add(MinecraftService.pingServer(address, port));
+                    data.put(minecraftServer.getName(), MinecraftService.pingServer(address, port));
                 }
             });
         }
         return data;
     }
 
-    @GetMapping("server/log/{server}")
-    private void getServerLog(@PathVariable String server){
-        // TODO implement
-    }
+
 
     @GetMapping("/server/versions")
     public HashMap<String, HashMap<String, MinecraftServerVersion>> getMinecraftServerVersions(){

@@ -52,6 +52,17 @@ public class MinecraftServer {
         }
     }
 
+    public MinecraftServerLog loadLog(){
+        File logFile = new File(getFilePath() + "/logs/latest.log");
+        StringBuilder log = new StringBuilder();
+        try {
+            Scanner input = new Scanner(logFile);
+            input.useDelimiter("\n");
+            input.forEachRemaining(line -> log.append(line).append("\n"));
+        } catch (FileNotFoundException ignored) {}
+        return new MinecraftServerLog(log.toString());
+    }
+
     public void startServer(){
         status = MC_SERVER_STARTING;
         log.info("Starting " + name);
