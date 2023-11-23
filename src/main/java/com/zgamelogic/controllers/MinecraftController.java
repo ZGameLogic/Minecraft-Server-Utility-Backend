@@ -17,16 +17,14 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 
 import static com.zgamelogic.data.Constants.MC_SERVER_ONLINE;
 import static com.zgamelogic.services.MinecraftService.downloadServer;
@@ -81,12 +79,39 @@ public class MinecraftController {
         return servers.values();
     }
 
+    @GetMapping("server/ping/{server}")
+    private Collection<MinecraftServerPingData> getServerPing(@PathVariable(required = false) String server){
+        LinkedList<MinecraftServerPingData> data = new LinkedList<>();
+        if(server != null){
+            MinecraftServer minecraftServer = servers.get(server);
+            if(minecraftServer.getStatus().equals(MC_SERVER_ONLINE)) {
+                int port = Integer.parseInt(minecraftServer.getServerProperties().get("server-port"));
+                String address = "zgamelogic.com";
+                data.add(MinecraftService.pingServer(address, port));
+            }
+        } else {
+            servers.forEach((key, minecraftServer) -> {
+                if(minecraftServer.getStatus().equals(MC_SERVER_ONLINE)) {
+                    int port = Integer.parseInt(minecraftServer.getServerProperties().get("server-port"));
+                    String address = "zgamelogic.com";
+                    data.add(MinecraftService.pingServer(address, port));
+                }
+            });
+        }
+        return data;
+    }
+
+    @GetMapping("server/log/{server}")
+    private void getServerLog(@PathVariable String server){
+        // TODO implement
+    }
+
     @GetMapping("/server/versions")
     public HashMap<String, HashMap<String, MinecraftServerVersion>> getMinecraftServerVersions(){
         return serverVersions;
     }
 
-    @PostMapping("servers/status")
+    @PostMapping("server/command")
     private void sendCommand(@RequestBody MinecraftServerStatusCommand command){
         if(!servers.containsKey(command.server())) return;
         switch (command.command()){
@@ -102,7 +127,7 @@ public class MinecraftController {
         }
     }
 
-    @PostMapping("servers/create")
+    @PostMapping("server/create")
     private void createServer(@RequestBody MinecraftServerCreationData data){
         MinecraftServerConfig config = new MinecraftServerConfig(data);
         File serverDir = new File(SERVERS_DIR + "/" + data.getName());
@@ -131,7 +156,7 @@ public class MinecraftController {
         if(config.isAutoStart()) servers.get(data.getName()).startServer();
     }
 
-    @PostMapping("servers/update")
+    @PostMapping("server/update")
     private void updateServer(@RequestBody MinecraftServerUpdateCommand updateCommand){
         servers.get(updateCommand.getServer()).updateServer(serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
     }
