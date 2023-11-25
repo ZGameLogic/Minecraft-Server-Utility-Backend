@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Scanner;
 
 import static com.zgamelogic.data.Constants.*;
@@ -23,6 +24,7 @@ public class MinecraftServer {
     private String name;
     private HashMap<String, String> serverProperties;
     private MinecraftServerConfig serverConfig;
+    private LinkedList<String> online;
 
     @JsonIgnore
     private Process serverProcess;
@@ -42,6 +44,7 @@ public class MinecraftServer {
         this.messageAction = messageAction;
         this.statusAction = statusAction;
         status = MC_SERVER_OFFLINE;
+        online = new LinkedList<>();
         serverProperties = new HashMap<>();
         loadServerProperties();
         loadServerConfig();
@@ -126,7 +129,7 @@ public class MinecraftServer {
         processInput.flush();
     }
 
-    public void updateServer(String download){
+    public void updateServerVersion(String download){
         if(status.equals(MC_SERVER_ONLINE)) stopServer();
         blockThreadUntilOffline();
         status = MC_SERVER_UPDATING;
@@ -151,6 +154,29 @@ public class MinecraftServer {
         }
     }
 
+    private void processServerLine(String line){
+        if(line.contains("]: Done (")){
+            status = MC_SERVER_ONLINE;
+        } else if(line.contains("Stopping server")){
+            status = MC_SERVER_STOPPING;
+        } else if(line.matches(MC_JOIN_GAME_REGEX)){
+            online.add(extractUsername(line));
+        } else if(line.matches(MC_LEFT_GAME_REGEX)){
+            online.remove(extractUsername(line));
+        }
+    }
+
+    private String extractUsername(String line){
+        return line
+                .replaceAll("\\[.*] \\[Server thread/INFO]: ", "")
+                .replaceAll(" .*$", "")
+                .replaceAll("[<>]", "");
+    }
+
+    public int getPlayersOnline(){
+        return online.size();
+    }
+
     private void serverWatch(){
         new Thread(() -> {
             while(serverProcess.isAlive()){
@@ -158,11 +184,7 @@ public class MinecraftServer {
                     String line = processOutput.readLine();
                     if(line == null) continue;
                     log.debug(line);
-                    if(line.contains("]: Done (")){
-                        status = MC_SERVER_ONLINE;
-                    } else if(line.contains("Stopping server")){
-                        status = MC_SERVER_STOPPING;
-                    }
+                    processServerLine(line);
                     messageAction.action(name, line);
                 } catch (IOException ignored) {}
             }
@@ -171,6 +193,7 @@ public class MinecraftServer {
             } else {
                 status = MC_SERVER_CRASHED;
             }
+            online.clear();
         }, name + " watch").start();
         new Thread(() -> {
             String currentStatus = status;

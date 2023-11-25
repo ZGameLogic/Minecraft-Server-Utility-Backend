@@ -9,4 +9,6 @@ public abstract class Constants {
     public final static String MC_SERVER_CRASHED = "Crashed";
     public final static String MC_SERVER_UPDATING = "Updating";
 
+    public final static String MC_JOIN_GAME_REGEX = "\\[.*] \\[Server thread/INFO]: ([^\\[<].*?) joined the game$";
+    public final static String MC_LEFT_GAME_REGEX = "\\[.*] \\[Server thread/INFO]: ([^\\[<].*?) left the game$";
 }

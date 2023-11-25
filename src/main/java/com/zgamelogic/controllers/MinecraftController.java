@@ -28,7 +28,6 @@ import java.util.LinkedList;
 import java.util.Map;
 
 import static com.zgamelogic.data.Constants.MC_SERVER_OFFLINE;
-import static com.zgamelogic.data.Constants.MC_SERVER_ONLINE;
 import static com.zgamelogic.services.MinecraftService.downloadServer;
 
 @Slf4j
@@ -95,30 +94,6 @@ public class MinecraftController {
         return data;
     }
 
-    @GetMapping({"/server/ping/", "/server/ping/{server}"})
-    private Map<String, MinecraftServerPingData> getServerPing(@PathVariable(required = false) String server){
-        HashMap<String, MinecraftServerPingData> data = new HashMap<>();
-        if(server != null){
-            MinecraftServer minecraftServer = servers.get(server);
-            if(minecraftServer.getStatus().equals(MC_SERVER_ONLINE)) {
-                int port = Integer.parseInt(minecraftServer.getServerProperties().get("server-port"));
-                String address = "zgamelogic.com";
-                data.put(minecraftServer.getName(), MinecraftService.pingServer(address, port));
-            }
-        } else {
-            servers.forEach((key, minecraftServer) -> {
-                if(minecraftServer.getStatus().equals(MC_SERVER_ONLINE)) {
-                    int port = Integer.parseInt(minecraftServer.getServerProperties().get("server-port"));
-                    String address = "zgamelogic.com";
-                    data.put(minecraftServer.getName(), MinecraftService.pingServer(address, port));
-                }
-            });
-        }
-        return data;
-    }
-
-
-
     @GetMapping("/server/versions")
     public HashMap<String, HashMap<String, MinecraftServerVersion>> getMinecraftServerVersions(){
         return serverVersions;
@@ -171,7 +146,7 @@ public class MinecraftController {
 
     @PostMapping("server/update")
     private void updateServer(@RequestBody MinecraftServerUpdateCommand updateCommand){
-        servers.get(updateCommand.getServer()).updateServer(serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
+        servers.get(updateCommand.getServer()).updateServerVersion(serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
     }
 
     @GetMapping("curseforge/project")
@@ -189,12 +164,7 @@ public class MinecraftController {
     @MessageMapping("/hello")
     @SendTo("/server/message")
     public MinecraftServer greeting(MinecraftWebsocketDataRequest message) {
-        MinecraftServer server = servers.get(message.getServer());
-        if(server.getStatus().equals(MC_SERVER_ONLINE)){
-            MinecraftServerPingData pingData = MinecraftService.pingServer("localhost", Integer.parseInt(server.getServerProperties().get("server-port")));
-            return new MinecraftServerOnline(server, pingData);
-        }
-        return server;
+        return servers.get(message.getServer());
     }
 
     @PreDestroy
