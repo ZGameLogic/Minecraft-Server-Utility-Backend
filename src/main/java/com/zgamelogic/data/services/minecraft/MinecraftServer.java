@@ -15,6 +15,7 @@ import java.util.Scanner;
 
 import static com.zgamelogic.data.Constants.*;
 
+@SuppressWarnings("unused")
 @NoArgsConstructor
 @Slf4j
 @Data
