@@ -56,8 +56,6 @@ public abstract class MinecraftService {
     }
 
     public static void downloadServer(File dir, String link){
-        HttpHeaders headers = new HttpHeaders();
-        HttpEntity<String> entity = new HttpEntity<>(headers);
         RestTemplate restTemplate = new RestTemplate();
         restTemplate.execute(link, HttpMethod.GET, requestCallback -> {
             requestCallback.getHeaders().setContentType(MediaType.APPLICATION_OCTET_STREAM);

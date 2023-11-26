@@ -11,4 +11,9 @@ public abstract class Constants {
 
     public final static String MC_JOIN_GAME_REGEX = "\\[.*] \\[Server thread/INFO]: ([^\\[<].*?) joined the game$";
     public final static String MC_LEFT_GAME_REGEX = "\\[.*] \\[Server thread/INFO]: ([^\\[<].*?) left the game$";
+
+    public final static String MC_SERVER_CREATE_SUCCESS = "Server created successfully.";
+    public final static String MC_SERVER_CREATE_PORT_CONFLICT = "Unable to create server due to port conflict.";
+    public final static String MC_SERVER_CREATE_NAME_CONFLICT = "Unable to create server due to name conflict.";
+    public final static String MC_SERVER_CREATE_CONFLICT = "Unable to create server. Server name or port already in use. Archive existing servers to open up the port or name.";
 }

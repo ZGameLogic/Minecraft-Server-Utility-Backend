@@ -27,7 +27,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
-import static com.zgamelogic.data.Constants.MC_SERVER_OFFLINE;
+import static com.zgamelogic.data.Constants.*;
 import static com.zgamelogic.services.MinecraftService.downloadServer;
 
 @Slf4j
@@ -63,16 +63,6 @@ public class MinecraftController {
     @PostConstruct
     private void postConstruct(){
         updateServerVersions();
-    }
-
-    private void serverMessageAction(String name, String line){
-        MinecraftSocketMessage msm = new MinecraftSocketMessage("log", name, line);
-        webSocketService.sendMessage("/server/message", msm);
-    }
-
-    private void serverStatusAction(String name, String status){
-        MinecraftSocketMessage msm = new MinecraftSocketMessage("status", name, status);
-        webSocketService.sendMessage("/server/message", msm);
     }
 
     @GetMapping("servers")
@@ -115,8 +105,18 @@ public class MinecraftController {
         }
     }
 
+    @PostMapping("server/create/check")
+    private CompletionMessage checkServerCreation(@RequestBody MinecraftServerCreationData data){
+        LinkedList<String> failReasons = new LinkedList<>();
+        if(checkOpenServerPort(data.getPort())) failReasons.add(MC_SERVER_CREATE_PORT_CONFLICT);
+        if(checkOpenServerName(data.getName())) failReasons.add(MC_SERVER_CREATE_NAME_CONFLICT);
+        if(failReasons.isEmpty()) return CompletionMessage.success("All this info checks out.");
+        return CompletionMessage.fail(MC_SERVER_CREATE_CONFLICT, failReasons);
+    }
+
     @PostMapping("server/create")
-    private void createServer(@RequestBody MinecraftServerCreationData data){
+    private CompletionMessage createServer(@RequestBody MinecraftServerCreationData data){
+        if(!checkCanCreate(data)) return CompletionMessage.fail(MC_SERVER_CREATE_CONFLICT);
         MinecraftServerConfig config = new MinecraftServerConfig(data);
         File serverDir = new File(SERVERS_DIR + "/" + data.getName());
         serverDir.mkdirs();
@@ -137,11 +137,9 @@ public class MinecraftController {
         } catch (IOException ignored) {}
         String download = serverVersions.get(data.getCategory()).get(data.getVersion()).getUrl();
         downloadServer(serverDir, download);
-        servers.clear();
-        for(File server: SERVERS_DIR.listFiles()){
-            servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction));
-        }
+        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction));
         if(config.isAutoStart()) servers.get(data.getName()).startServer();
+        return CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, servers.get(serverDir.getName()));
     }
 
     @PostMapping("server/update")
@@ -176,5 +174,28 @@ public class MinecraftController {
     @Scheduled(cron = "0 0 0 ? * *")
     private void updateServerVersions(){
         serverVersions = MinecraftService.getMinecraftServerVersions(curseforgeToken, curseforgeProjectRepository.findAll());
+    }
+
+    private boolean checkCanCreate(MinecraftServerCreationData server){
+        return checkOpenServerName(server.getName()) &&
+                        checkOpenServerPort(server.getPort());
+    }
+
+    private boolean checkOpenServerName(String name){
+        return !servers.containsKey(name);
+    }
+
+    private boolean checkOpenServerPort(int port){
+        return servers.values().stream().noneMatch(server -> Integer.parseInt(server.getServerProperties().get("server-port")) == port);
+    }
+
+    private void serverMessageAction(String name, String line){
+        MinecraftSocketMessage msm = new MinecraftSocketMessage("log", name, line);
+        webSocketService.sendMessage("/server/message", msm);
+    }
+
+    private void serverStatusAction(String name, String status){
+        MinecraftSocketMessage msm = new MinecraftSocketMessage("status", name, status);
+        webSocketService.sendMessage("/server/message", msm);
     }
 }

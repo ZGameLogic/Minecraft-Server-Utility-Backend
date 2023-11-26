@@ -158,6 +158,7 @@ public class MinecraftServer {
     private void processServerLine(String line){
         if(line.contains("]: Done (")){
             status = MC_SERVER_ONLINE;
+            loadServerProperties();
         } else if(line.contains("Stopping server")){
             status = MC_SERVER_STOPPING;
         } else if(line.matches(MC_JOIN_GAME_REGEX)){
@@ -215,7 +216,7 @@ public class MinecraftServer {
         name = properties.getParentFile().getName();
         try {
             Scanner input = new Scanner(properties);
-            input.useDelimiter("\n");
+            input.useDelimiter("\r\n");
             input.forEachRemaining(line -> {
                 if(line.split("=").length < 2) return;
                 String key = line.split("=")[0];
