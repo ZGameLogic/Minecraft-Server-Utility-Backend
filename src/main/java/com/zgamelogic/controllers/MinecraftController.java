@@ -108,8 +108,8 @@ public class MinecraftController {
     @PostMapping("server/create/check")
     private CompletionMessage checkServerCreation(@RequestBody MinecraftServerCreationData data){
         LinkedList<String> failReasons = new LinkedList<>();
-        if(checkOpenServerPort(data.getPort())) failReasons.add(MC_SERVER_CREATE_PORT_CONFLICT);
-        if(checkOpenServerName(data.getName())) failReasons.add(MC_SERVER_CREATE_NAME_CONFLICT);
+        if(!checkOpenServerPort(data.getPort())) failReasons.add(MC_SERVER_CREATE_PORT_CONFLICT);
+        if(!checkOpenServerName(data.getName())) failReasons.add(MC_SERVER_CREATE_NAME_CONFLICT);
         if(failReasons.isEmpty()) return CompletionMessage.success("All this info checks out.");
         return CompletionMessage.fail(MC_SERVER_CREATE_CONFLICT, failReasons);
     }
@@ -186,7 +186,11 @@ public class MinecraftController {
     }
 
     private boolean checkOpenServerPort(int port){
-        return servers.values().stream().noneMatch(server -> Integer.parseInt(server.getServerProperties().get("server-port")) == port);
+        return servers.values().stream().noneMatch(server -> {
+            server.getServerProperties().keySet().forEach(System.out::println);
+            if(!server.getServerProperties().containsKey("server-port")) return false;
+            return Integer.parseInt(server.getServerProperties().get("server-port")) == port;
+        });
     }
 
     private void serverMessageAction(String name, String line){

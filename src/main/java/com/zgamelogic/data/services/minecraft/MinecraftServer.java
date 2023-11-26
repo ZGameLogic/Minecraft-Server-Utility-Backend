@@ -216,13 +216,14 @@ public class MinecraftServer {
         name = properties.getParentFile().getName();
         try {
             Scanner input = new Scanner(properties);
-            input.useDelimiter("\r\n");
-            input.forEachRemaining(line -> {
-                if(line.split("=").length < 2) return;
-                String key = line.split("=")[0];
-                String value = line.split("=")[1];
-                serverProperties.put(key, value);
-            });
+            while(input.hasNextLine()){
+                String line = input.nextLine();
+                if(!line.contains("=")) continue;
+                String[] spaces = line.split("=");
+                String key = spaces[0];
+                String value = spaces.length > 1 ? line.split("=")[1] : "";
+                serverProperties.put(key.trim(), value.trim());
+            }
         } catch (FileNotFoundException e) {
             log.error("Error reloading server data", e);
         }
