@@ -10,13 +10,17 @@ import com.zgamelogic.services.CurseforgeService;
 import com.zgamelogic.services.MinecraftService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
@@ -106,17 +110,21 @@ public class MinecraftController {
     }
 
     @PostMapping("server/create/check")
-    private CompletionMessage checkServerCreation(@RequestBody MinecraftServerCreationData data){
+    private ResponseEntity<CompletionMessage> checkServerCreation(@Valid @RequestBody MinecraftServerCreationData data, BindingResult bindingResult){
         LinkedList<String> failReasons = new LinkedList<>();
-        if(!checkOpenServerPort(data.getPort())) failReasons.add(MC_SERVER_CREATE_PORT_CONFLICT);
-        if(!checkOpenServerName(data.getName())) failReasons.add(MC_SERVER_CREATE_NAME_CONFLICT);
-        if(failReasons.isEmpty()) return CompletionMessage.success("All this info checks out.");
-        return CompletionMessage.fail(MC_SERVER_CREATE_CONFLICT, failReasons);
+        bindingResult.getFieldErrors().forEach(fieldError -> failReasons.add(fieldError.getDefaultMessage()));
+        if(data.getPort() != null && !checkOpenServerPort(data.getPort())) failReasons.add(MC_SERVER_CREATE_PORT_CONFLICT);
+        if(data.getName() != null && !checkOpenServerName(data.getName())) failReasons.add(MC_SERVER_CREATE_NAME_CONFLICT);
+        if(data.getVersion() != null && !checkValidServerVersion(data.getCategory(), data.getVersion())) failReasons.add(MC_SERVER_CREATE_VERSION_DOESNT_EXIST);
+
+        if(failReasons.isEmpty()) return ResponseEntity.ok(CompletionMessage.success("All this info checks out."));
+        return ResponseEntity.badRequest().body(CompletionMessage.fail(MC_SERVER_CREATE_CONFLICT, failReasons));
     }
 
     @PostMapping("server/create")
-    private CompletionMessage createServer(@RequestBody MinecraftServerCreationData data){
-        if(!checkCanCreate(data)) return CompletionMessage.fail(MC_SERVER_CREATE_CONFLICT);
+    private ResponseEntity<CompletionMessage> createServer(@Valid @RequestBody MinecraftServerCreationData data, BindingResult bindingResult){
+        ResponseEntity<CompletionMessage> validationCheck = checkServerCreation(data, bindingResult);
+        if(!validationCheck.getStatusCode().equals(HttpStatus.OK)) return validationCheck;
         MinecraftServerConfig config = new MinecraftServerConfig(data);
         File serverDir = new File(SERVERS_DIR + "/" + data.getName());
         serverDir.mkdirs();
@@ -139,7 +147,7 @@ public class MinecraftController {
         downloadServer(serverDir, download);
         servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction));
         if(config.isAutoStart()) servers.get(data.getName()).startServer();
-        return CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, servers.get(serverDir.getName()));
+        return ResponseEntity.ok(CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, servers.get(serverDir.getName())));
     }
 
     @PostMapping("server/update")
@@ -176,18 +184,17 @@ public class MinecraftController {
         serverVersions = MinecraftService.getMinecraftServerVersions(curseforgeToken, curseforgeProjectRepository.findAll());
     }
 
-    private boolean checkCanCreate(MinecraftServerCreationData server){
-        return checkOpenServerName(server.getName()) &&
-                        checkOpenServerPort(server.getPort());
-    }
-
     private boolean checkOpenServerName(String name){
         return !servers.containsKey(name);
     }
 
+    private boolean checkValidServerVersion(String category, String version){
+         if(!serverVersions.containsKey(category)) return false;
+         return serverVersions.get(category).containsKey(version);
+    }
+
     private boolean checkOpenServerPort(int port){
         return servers.values().stream().noneMatch(server -> {
-            server.getServerProperties().keySet().forEach(System.out::println);
             if(!server.getServerProperties().containsKey("server-port")) return false;
             return Integer.parseInt(server.getServerProperties().get("server-port")) == port;
         });

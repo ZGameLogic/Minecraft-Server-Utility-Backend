@@ -14,8 +14,8 @@ public class MinecraftServerConfig {
     private String updateScript;
 
     public MinecraftServerConfig(MinecraftServerCreationData data){
-        autoStart = data.isAutoStart();
-        autoUpdate = data.isAutoUpdate();
+        autoStart = data.getAutoStart();
+        autoUpdate = data.getAutoUpdate();
         version = data.getVersion();
         category = data.getCategory();
         startCommand = data.getStartCommand();
