@@ -89,8 +89,10 @@ public class MinecraftController {
     }
 
     @GetMapping("/server/versions")
-    public HashMap<String, HashMap<String, MinecraftServerVersion>> getMinecraftServerVersions(){
-        return serverVersions;
+    public HashMap<String, LinkedList<String>> getMinecraftServerVersions(){
+        HashMap<String, LinkedList<String>> data = new HashMap<>();
+        serverVersions.forEach((key, value) -> data.put(key, new LinkedList<>(value.keySet())));
+        return data;
     }
 
     @PostMapping("server/command")
