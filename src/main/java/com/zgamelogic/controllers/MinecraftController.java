@@ -113,11 +113,11 @@ public class MinecraftController {
 
     @PostMapping("server/create/check")
     private ResponseEntity<CompletionMessage> checkServerCreation(@Valid @RequestBody MinecraftServerCreationData data, BindingResult bindingResult){
-        LinkedList<String> failReasons = new LinkedList<>();
-        bindingResult.getFieldErrors().forEach(fieldError -> failReasons.add(fieldError.getDefaultMessage()));
-        if(data.getPort() != null && !checkOpenServerPort(data.getPort())) failReasons.add(MC_SERVER_CREATE_PORT_CONFLICT);
-        if(data.getName() != null && !checkOpenServerName(data.getName())) failReasons.add(MC_SERVER_CREATE_NAME_CONFLICT);
-        if(data.getVersion() != null && !checkValidServerVersion(data.getCategory(), data.getVersion())) failReasons.add(MC_SERVER_CREATE_VERSION_DOESNT_EXIST);
+        HashMap<String, String> failReasons = new HashMap<>();
+        bindingResult.getFieldErrors().forEach(fieldError -> failReasons.put(fieldError.getField(), fieldError.getDefaultMessage()));
+        if(data.getPort() != null && !checkOpenServerPort(data.getPort())) failReasons.put("port", MC_SERVER_CREATE_PORT_CONFLICT);
+        if(data.getName() != null && !checkOpenServerName(data.getName())) failReasons.put("name", MC_SERVER_CREATE_NAME_CONFLICT);
+        if(data.getVersion() != null && !checkValidServerVersion(data.getCategory(), data.getVersion())) failReasons.put("version", MC_SERVER_CREATE_VERSION_DOESNT_EXIST);
 
         if(failReasons.isEmpty()) return ResponseEntity.ok(CompletionMessage.success("All this info checks out."));
         return ResponseEntity.badRequest().body(CompletionMessage.fail(MC_SERVER_CREATE_CONFLICT, failReasons));
