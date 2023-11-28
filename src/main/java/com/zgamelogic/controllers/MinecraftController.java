@@ -17,9 +17,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,7 +37,7 @@ import static com.zgamelogic.data.Constants.*;
 import static com.zgamelogic.services.MinecraftService.downloadServer;
 
 @Slf4j
-@RestController
+@Controller
 @PropertySource("File:msu.properties")
 public class MinecraftController {
 
@@ -46,12 +48,12 @@ public class MinecraftController {
     private final HashMap<String, MinecraftServer> servers;
     private HashMap<String, HashMap<String, MinecraftServerVersion>> serverVersions;
 
-    private final WebSocketService webSocketService;
     private final CurseforgeProjectRepository curseforgeProjectRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Autowired
-    private MinecraftController(WebSocketService webSocketService, CurseforgeProjectRepository curseforgeProjectRepository){
-        this.webSocketService = webSocketService;
+    private MinecraftController(CurseforgeProjectRepository curseforgeProjectRepository, SimpMessagingTemplate messagingTemplate){
+        this.messagingTemplate = messagingTemplate;
         this.curseforgeProjectRepository = curseforgeProjectRepository;
         if(!SERVERS_DIR.exists()) SERVERS_DIR.mkdirs();
         serverVersions = new HashMap<>();
@@ -69,11 +71,13 @@ public class MinecraftController {
         updateServerVersions();
     }
 
-    @GetMapping("servers")
+    @ResponseBody
+    @GetMapping("/servers")
     private Collection<MinecraftServer> getServers(){
         return servers.values();
     }
 
+    @ResponseBody
     @GetMapping({"/server/log/", "/server/log/{server}"})
     private Map<String, MinecraftServerLog> getServerLog(@PathVariable(required = false) String server){
         HashMap<String, MinecraftServerLog> data = new HashMap<>();
@@ -88,6 +92,7 @@ public class MinecraftController {
         return data;
     }
 
+    @ResponseBody
     @GetMapping("/server/versions")
     public HashMap<String, LinkedList<String>> getMinecraftServerVersions(){
         HashMap<String, LinkedList<String>> data = new HashMap<>();
@@ -111,6 +116,7 @@ public class MinecraftController {
         }
     }
 
+    @ResponseBody
     @PostMapping("server/create/check")
     private ResponseEntity<CompletionMessage> checkServerCreation(@Valid @RequestBody MinecraftServerCreationData data, BindingResult bindingResult){
         HashMap<String, String> failReasons = new HashMap<>();
@@ -123,6 +129,7 @@ public class MinecraftController {
         return ResponseEntity.badRequest().body(CompletionMessage.fail(MC_SERVER_CREATE_CONFLICT, failReasons));
     }
 
+    @ResponseBody
     @PostMapping("server/create")
     private ResponseEntity<CompletionMessage> createServer(@Valid @RequestBody MinecraftServerCreationData data, BindingResult bindingResult){
         ResponseEntity<CompletionMessage> validationCheck = checkServerCreation(data, bindingResult);
@@ -157,6 +164,7 @@ public class MinecraftController {
         servers.get(updateCommand.getServer()).updateServerVersion(serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
     }
 
+    @ResponseBody
     @GetMapping("curseforge/project")
     private CurseforgeMod getCurseforgeProject(@RequestBody CurseforgeProjectData data){
         return CurseforgeService.getCurseforgeMod(curseforgeToken, data.getProjectId());
@@ -169,10 +177,29 @@ public class MinecraftController {
         updateServerVersions();
     }
 
-    @MessageMapping("/hello")
-    @SendTo("/server/message")
-    public MinecraftServer greeting(MinecraftWebsocketDataRequest message) {
-        return servers.get(message.getServer());
+    @MessageMapping("/server/{server}")
+    public void serverWebsocketMessage(@DestinationVariable String server, MinecraftWebsocketDataRequest message) {
+        if(!servers.containsKey(server)) return;
+        MinecraftServer mcServer = servers.get(server);
+        switch(message.getAction()){
+            case "start":
+                mcServer.startServer();
+                break;
+            case "restart":
+                mcServer.restartServer();
+                break;
+            case "stop":
+                mcServer.stopServer();
+                break;
+            case "update":
+                break;
+            case "command":
+                mcServer.sendServerCommand(message.getData().get("command"));
+                break;
+        }
+        log.info("Sending it back to /app/server/" + server);
+        messagingTemplate.convertAndSend("/server/" + server, mcServer);
+        log.info("Sent");
     }
 
     @PreDestroy
@@ -204,11 +231,11 @@ public class MinecraftController {
 
     private void serverMessageAction(String name, String line){
         MinecraftSocketMessage msm = new MinecraftSocketMessage("log", name, line);
-        webSocketService.sendMessage("/server/message", msm);
+        messagingTemplate.convertAndSend("/app/server/" + name, msm);
     }
 
     private void serverStatusAction(String name, String status){
         MinecraftSocketMessage msm = new MinecraftSocketMessage("status", name, status);
-        webSocketService.sendMessage("/server/message", msm);
+        messagingTemplate.convertAndSend("/app/server/" + name, msm);
     }
 }
