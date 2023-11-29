@@ -6,6 +6,7 @@ import com.zgamelogic.data.database.curseforge.CurseforgeProject;
 import com.zgamelogic.data.database.curseforge.CurseforgeProjectRepository;
 import com.zgamelogic.data.services.curseforge.CurseforgeMod;
 import com.zgamelogic.data.services.minecraft.*;
+import com.zgamelogic.data.services.minecraft.MinecraftSocketMessage;
 import com.zgamelogic.services.CurseforgeService;
 import com.zgamelogic.services.MinecraftService;
 import jakarta.annotation.PostConstruct;
@@ -54,7 +55,7 @@ public class MinecraftController {
         serverVersions = new HashMap<>();
         servers = new HashMap<>();
         for(File server: SERVERS_DIR.listFiles()){
-            servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction));
+            servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction));
         }
         log.info("Starting minecraft auto-start servers...");
         servers.values().stream().filter(mcServer -> mcServer.getServerConfig().isAutoStart())
@@ -151,7 +152,7 @@ public class MinecraftController {
         } catch (IOException ignored) {}
         String download = serverVersions.get(data.getCategory()).get(data.getVersion()).getUrl();
         downloadServer(serverDir, download);
-        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction));
+        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction));
         if(config.isAutoStart()) servers.get(data.getName()).startServer();
         return ResponseEntity.ok(CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, servers.get(serverDir.getName())));
     }
@@ -226,13 +227,18 @@ public class MinecraftController {
         });
     }
 
-    private void serverMessageAction(String name, String line){
+    private void serverMessageAction(String name, Object line){
         MinecraftSocketMessage msm = new MinecraftSocketMessage("log", line, name);
         webSocketService.sendMessage("/server/" + name, msm);
     }
 
-    private void serverStatusAction(String name, String status){
+    private void serverStatusAction(String name, Object status){
         MinecraftSocketMessage msm = new MinecraftSocketMessage("status", status, name);
+        webSocketService.sendMessage("/server/" + name, msm);
+    }
+
+    private void serverPlayerAction(String name, Object packet){
+        MinecraftSocketMessage msm = new MinecraftSocketMessage("player", packet, name);
         webSocketService.sendMessage("/server/" + name, msm);
     }
 }

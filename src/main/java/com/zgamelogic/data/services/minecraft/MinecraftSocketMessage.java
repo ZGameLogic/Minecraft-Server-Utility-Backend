@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @Getter
 public class MinecraftSocketMessage {
     private String messageType;
-    private String message;
+    private Object message;
     private String server;
 }

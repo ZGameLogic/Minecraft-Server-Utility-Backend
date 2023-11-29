@@ -39,11 +39,14 @@ public class MinecraftServer {
     private MinecraftServerSocketAction messageAction;
     @JsonIgnore
     private MinecraftServerSocketAction statusAction;
+    @JsonIgnore
+    private MinecraftServerSocketAction playerAction;
 
-    public MinecraftServer(File serverDir, MinecraftServerSocketAction messageAction, MinecraftServerSocketAction statusAction){
+    public MinecraftServer(File serverDir, MinecraftServerSocketAction messageAction, MinecraftServerSocketAction statusAction, MinecraftServerSocketAction playerAction){
         filePath = serverDir.getPath();
         this.messageAction = messageAction;
         this.statusAction = statusAction;
+        this.playerAction = playerAction;
         status = MC_SERVER_OFFLINE;
         online = new LinkedList<>();
         serverProperties = new HashMap<>();
@@ -164,8 +167,10 @@ public class MinecraftServer {
             status = MC_SERVER_STOPPING;
         } else if(line.matches(MC_JOIN_GAME_REGEX)){
             online.add(extractUsername(line));
+            playerAction.action(name, new MinecraftServerPlayersPacket(online));
         } else if(line.matches(MC_LEFT_GAME_REGEX)){
             online.remove(extractUsername(line));
+            playerAction.action(name, new MinecraftServerPlayersPacket(online));
         }
     }
 
