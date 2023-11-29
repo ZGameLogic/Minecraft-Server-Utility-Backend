@@ -63,6 +63,7 @@ public class MinecraftServer {
             Scanner input = new Scanner(logFile);
             input.useDelimiter("\n");
             input.forEachRemaining(line -> log.append(line).append("\n"));
+            input.close();
         } catch (FileNotFoundException ignored) {}
         return new MinecraftServerLog(log.toString());
     }

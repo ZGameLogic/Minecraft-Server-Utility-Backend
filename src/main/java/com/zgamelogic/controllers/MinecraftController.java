@@ -19,25 +19,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
+import java.util.*;
 
 import static com.zgamelogic.data.Constants.*;
 import static com.zgamelogic.services.MinecraftService.downloadServer;
 
 @Slf4j
-@Controller
+@RestController
 @PropertySource("File:msu.properties")
 public class MinecraftController {
 
@@ -49,11 +45,11 @@ public class MinecraftController {
     private HashMap<String, HashMap<String, MinecraftServerVersion>> serverVersions;
 
     private final CurseforgeProjectRepository curseforgeProjectRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final WebSocketService webSocketService;
 
     @Autowired
-    private MinecraftController(CurseforgeProjectRepository curseforgeProjectRepository, SimpMessagingTemplate messagingTemplate){
-        this.messagingTemplate = messagingTemplate;
+    private MinecraftController(CurseforgeProjectRepository curseforgeProjectRepository, WebSocketService webSocketService){
+        this.webSocketService = webSocketService;
         this.curseforgeProjectRepository = curseforgeProjectRepository;
         if(!SERVERS_DIR.exists()) SERVERS_DIR.mkdirs();
         serverVersions = new HashMap<>();
@@ -72,9 +68,11 @@ public class MinecraftController {
     }
 
     @ResponseBody
-    @GetMapping("/servers")
-    private Collection<MinecraftServer> getServers(){
-        return servers.values();
+    @GetMapping({"/servers", "/servers/{server}"})
+    private Collection<MinecraftServer> getServers(@PathVariable(required = false) String server){
+        if(server == null) return servers.values();
+        if(!servers.containsKey(server)) return List.of();
+        return List.of(servers.get(server));
     }
 
     @ResponseBody
@@ -87,7 +85,7 @@ public class MinecraftController {
         } else {
             servers.addAll(this.servers.values());
         }
-        servers.removeIf(s -> !s.getStatus().equals(MC_SERVER_OFFLINE));
+        servers.removeIf(s -> !s.getStatus().equals(MC_SERVER_ONLINE));
         servers.forEach(s -> data.put(s.getName(), s.loadLog()));
         return data;
     }
@@ -178,7 +176,10 @@ public class MinecraftController {
     }
 
     @MessageMapping("/server/{server}")
-    public void serverWebsocketMessage(@DestinationVariable String server, MinecraftWebsocketDataRequest message) {
+    public void serverWebsocketMessage(
+            @DestinationVariable String server,
+            MinecraftWebsocketDataRequest message
+    ) {
         if(!servers.containsKey(server)) return;
         MinecraftServer mcServer = servers.get(server);
         switch(message.getAction()){
@@ -197,9 +198,6 @@ public class MinecraftController {
                 mcServer.sendServerCommand(message.getData().get("command"));
                 break;
         }
-        log.info("Sending it back to /app/server/" + server);
-        messagingTemplate.convertAndSend("/server/" + server, mcServer);
-        log.info("Sent");
     }
 
     @PreDestroy
@@ -230,12 +228,12 @@ public class MinecraftController {
     }
 
     private void serverMessageAction(String name, String line){
-        MinecraftSocketMessage msm = new MinecraftSocketMessage("log", name, line);
-        messagingTemplate.convertAndSend("/app/server/" + name, msm);
+        MinecraftSocketMessage msm = new MinecraftSocketMessage("log", line, name);
+        webSocketService.sendMessage("/server/" + name, msm);
     }
 
     private void serverStatusAction(String name, String status){
-        MinecraftSocketMessage msm = new MinecraftSocketMessage("status", name, status);
-        messagingTemplate.convertAndSend("/app/server/" + name, msm);
+        MinecraftSocketMessage msm = new MinecraftSocketMessage("status", status, name);
+        webSocketService.sendMessage("/server/" + name, msm);
     }
 }
