@@ -74,7 +74,7 @@ public class MinecraftServer {
     public void startServer(){
         if(!status.equals(MC_SERVER_OFFLINE) && !status.equals(MC_SERVER_CRASHED)) return;
         status = MC_SERVER_STARTING;
-        log.info("Starting " + name);
+        log.debug("Starting " + name);
         ProcessBuilder pb = new ProcessBuilder();
         pb.directory(new File(filePath));
         pb.command(serverConfig.getStartCommand().split(" "));
@@ -90,7 +90,7 @@ public class MinecraftServer {
     }
 
     public void stopServer(){
-        log.info("Stopping " + name);
+        log.debug("Stopping " + name);
         status = MC_SERVER_STOPPING;
         sendServerCommand("stop");
     }
