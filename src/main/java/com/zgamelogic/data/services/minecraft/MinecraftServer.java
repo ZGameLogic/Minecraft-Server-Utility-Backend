@@ -72,6 +72,7 @@ public class MinecraftServer {
     }
 
     public void startServer(){
+        if(!status.equals(MC_SERVER_OFFLINE) && !status.equals(MC_SERVER_CRASHED)) return;
         status = MC_SERVER_STARTING;
         log.info("Starting " + name);
         ProcessBuilder pb = new ProcessBuilder();
