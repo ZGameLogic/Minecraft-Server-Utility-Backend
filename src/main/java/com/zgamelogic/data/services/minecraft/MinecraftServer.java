@@ -14,6 +14,7 @@ import java.util.LinkedList;
 import java.util.Scanner;
 
 import static com.zgamelogic.data.Constants.*;
+import static com.zgamelogic.services.MinecraftService.downloadServer;
 
 @SuppressWarnings("unused")
 @NoArgsConstructor
@@ -139,24 +140,39 @@ public class MinecraftServer {
         if(status.equals(MC_SERVER_ONLINE)) stopServer();
         blockThreadUntilOffline();
         status = MC_SERVER_UPDATING;
-        new Thread(() -> {
-            // TODO download file
-            ProcessBuilder pb = new ProcessBuilder();
-            pb.directory(new File(filePath));
-            pb.command(serverConfig.getUpdateScript());
-            try {
-                Process update = pb.start();
-                while(update.isAlive()){
-                    Thread.sleep(250);
+        if(serverConfig.getVersion().equals("vanilla")) {
+            new Thread(() -> {
+                File serverDir = new File(filePath);
+                File serverJar = new File(filePath + "/server.jar");
+                serverJar.delete();
+                downloadServer(serverDir, download);
+                if(getServerConfig().isAutoStart()){
+                    startServer();
+                } else {
+                    status = MC_SERVER_OFFLINE;
                 }
-            } catch (IOException | InterruptedException ignored) {}
-            status = MC_SERVER_OFFLINE;
-        }, "Update").start();
-        blockThreadUntilOffline();
-        if(getServerConfig().isAutoStart()){
-            startServer();
+            }, "Update").start();
         } else {
-            status = MC_SERVER_OFFLINE;
+            new Thread(() -> {
+                // TODO lets think about this a tiny bit more before we continue
+                File serverDir = new File(filePath);
+                downloadServer(serverDir, download);
+                ProcessBuilder pb = new ProcessBuilder();
+                pb.directory(new File(filePath));
+                pb.command(serverConfig.getUpdateScript());
+                try {
+                    Process update = pb.start();
+                    while (update.isAlive()) {
+                        Thread.sleep(250);
+                    }
+                } catch (IOException | InterruptedException ignored) {
+                }
+                if(getServerConfig().isAutoStart()){
+                    startServer();
+                } else {
+                    status = MC_SERVER_OFFLINE;
+                }
+            }, "Update").start();
         }
     }
 
@@ -187,7 +203,7 @@ public class MinecraftServer {
     }
 
     private void serverWatch(){
-        new Thread(() -> {
+        new Thread(() -> { // Thread for handling input from the server console
             while(serverProcess.isAlive()){
                 try {
                     String line = processOutput.readLine();
@@ -204,7 +220,7 @@ public class MinecraftServer {
             }
             online.clear();
         }, name + " watch").start();
-        new Thread(() -> {
+        new Thread(() -> { // Thread for watching server status.
             String currentStatus = status;
             while(true){
                 try {
