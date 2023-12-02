@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Scanner;
@@ -42,12 +43,21 @@ public class MinecraftServer {
     private MinecraftServerSocketAction statusAction;
     @JsonIgnore
     private MinecraftServerSocketAction playerAction;
+    @JsonIgnore
+    private MinecraftServerSocketAction updateAction;
 
-    public MinecraftServer(File serverDir, MinecraftServerSocketAction messageAction, MinecraftServerSocketAction statusAction, MinecraftServerSocketAction playerAction){
+    public MinecraftServer(
+            File serverDir,
+            MinecraftServerSocketAction messageAction,
+            MinecraftServerSocketAction statusAction,
+            MinecraftServerSocketAction playerAction,
+            MinecraftServerSocketAction updateAction
+    ){
         filePath = serverDir.getPath();
         this.messageAction = messageAction;
         this.statusAction = statusAction;
         this.playerAction = playerAction;
+        this.updateAction = updateAction;
         status = MC_SERVER_OFFLINE;
         online = new LinkedList<>();
         serverProperties = new HashMap<>();
@@ -141,39 +151,85 @@ public class MinecraftServer {
         blockThreadUntilOffline();
         status = MC_SERVER_UPDATING;
         if(serverConfig.getVersion().equals("vanilla")) {
-            new Thread(() -> {
-                File serverDir = new File(filePath);
-                File serverJar = new File(filePath + "/server.jar");
-                serverJar.delete();
-                downloadServer(serverDir, download);
-                if(getServerConfig().isAutoStart()){
-                    startServer();
-                } else {
-                    status = MC_SERVER_OFFLINE;
-                }
-            }, "Update").start();
-        } else {
-            new Thread(() -> {
-                // TODO lets think about this a tiny bit more before we continue
-                File serverDir = new File(filePath);
-                downloadServer(serverDir, download);
-                ProcessBuilder pb = new ProcessBuilder();
-                pb.directory(new File(filePath));
-                pb.command(serverConfig.getUpdateScript());
-                try {
-                    Process update = pb.start();
-                    while (update.isAlive()) {
-                        Thread.sleep(250);
-                    }
-                } catch (IOException | InterruptedException ignored) {
-                }
-                if(getServerConfig().isAutoStart()){
-                    startServer();
-                } else {
-                    status = MC_SERVER_OFFLINE;
-                }
-            }, "Update").start();
+            updateVanillaServer(download);
+        } else if(serverConfig.getVersion().contains("ATM9")) {
+            updateATM9Server(download);
         }
+    }
+
+    private void updateATM9Server(String download){
+        new Thread(() -> {
+            File serverDir = new File(filePath);
+            File tempDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-temp");
+            File backDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-backup");
+            tempDir.mkdirs(); // create temp dir
+            updateMessage("Downloading server", 0.0);
+            downloadServer(tempDir, download); // download server to temp dir
+            updateMessage("Unpacking server", 0.17);
+            startScriptAndBlock("tar -xf server.jar"); // unzip download in temp dir
+            new File(tempDir.getPath() + "/server.jar").delete(); // delete download
+            updateMessage("Backing up old server", 0.34);
+            for(File file: tempDir.listFiles()){ // move files that exist in both tempDir and serverDir to backDir
+                File old = new File(serverDir.getPath() + "/" + file.getName());
+                if(old.getName().equals("config") || !old.exists()) continue;
+                try {
+                    Files.move(old.toPath(), new File(backDir.getPath() + "/" + old.getName()).toPath());
+                } catch (IOException ignored) {}
+            }
+            updateMessage("Moving files", 0.51);
+            for(File file: tempDir.listFiles()){ // move files from temp dir to server dir
+                File newF = new File(serverDir.getPath() + "/" + file.getName());
+                if(newF.getName().equals("config")) continue;
+                try {
+                    Files.move(newF.toPath(), new File(serverDir.getPath() + "/" + newF.getName()).toPath());
+                } catch (IOException ignored) {}
+            }
+            // TODO work the configs
+            updateMessage("Installing forge", 0.68);
+            startScriptAndBlock("startserver.bat"); // run script to install new forge
+            updateMessage("Messing with some properties", 0.85);
+            File runbat = new File(serverDir.getPath() + "/run.bat");
+            StringBuilder newRunBat = new StringBuilder();
+            try {
+                Scanner in = new Scanner(runbat);
+                while(in.hasNextLine()){
+                    String line = in.nextLine();
+                    if(line.startsWith("java")) {
+                        line.replace("%*", "nogui %*");
+                    }
+                    newRunBat.append(line).append("\n");
+                }
+                in.close();
+                PrintWriter out = new PrintWriter(runbat);
+                out.println(newRunBat);
+                out.close();
+            } catch (FileNotFoundException ignored) {}
+            tempDir.delete(); // remove temp dir
+            backDir.delete(); // remove back dir
+            updateMessage("Finished updating server", 1.0);
+            if(getServerConfig().isAutoStart()){
+                startServer();
+            } else {
+                status = MC_SERVER_OFFLINE;
+            }
+        }, "Update").start();
+    }
+
+    private void updateVanillaServer(String download){
+        new Thread(() -> {
+            File serverDir = new File(filePath);
+            File serverJar = new File(filePath + "/server.jar");
+            updateMessage("Deleting old jar", 0.0);
+            serverJar.delete();
+            updateMessage("Downloading new server", 0.5);
+            downloadServer(serverDir, download);
+            updateMessage("Complete", 1.0);
+            if(getServerConfig().isAutoStart()){
+                startServer();
+            } else {
+                status = MC_SERVER_OFFLINE;
+            }
+        }, "Update").start();
     }
 
     private void processServerLine(String line){
@@ -278,5 +334,24 @@ public class MinecraftServer {
                 Thread.sleep(10);
             } catch (InterruptedException ignored) {}
         }
+    }
+
+    private void updateMessage(String stage, double percentage){
+        HashMap<String, String> vals = new HashMap<>();
+        vals.put("stage", stage);
+        vals.put("percentage", percentage + "");
+        updateAction.action(name, vals);
+    }
+
+    private void startScriptAndBlock(String scriptName){
+            ProcessBuilder pb = new ProcessBuilder();
+            pb.directory(new File(filePath));
+            pb.command(scriptName.split(" "));
+            try {
+                Process update = pb.start();
+                while (update.isAlive()) {
+                    Thread.sleep(250);
+                }
+            } catch (IOException | InterruptedException ignored) {}
     }
 }

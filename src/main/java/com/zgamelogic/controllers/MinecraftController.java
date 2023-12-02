@@ -55,7 +55,7 @@ public class MinecraftController {
         serverVersions = new HashMap<>();
         servers = new HashMap<>();
         for(File server: SERVERS_DIR.listFiles()){
-            servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction));
+            servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction));
         }
         log.info("Starting minecraft auto-start servers...");
         servers.values().stream().filter(mcServer -> mcServer.getServerConfig().isAutoStart())
@@ -132,29 +132,40 @@ public class MinecraftController {
     private ResponseEntity<CompletionMessage> createServer(@Valid @RequestBody MinecraftServerCreationData data, BindingResult bindingResult){
         ResponseEntity<CompletionMessage> validationCheck = checkServerCreation(data, bindingResult);
         if(!validationCheck.getStatusCode().equals(HttpStatus.OK)) return validationCheck;
+        new Thread(() -> installServer(data), "Install Server").start();
+        return ResponseEntity.ok(CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, "Starting install process. Listen on the websocket for completion"));
+    }
+
+    private void installServer(MinecraftServerCreationData data) {
+        serverInstallAction(data.getName(), "Starting");
         MinecraftServerConfig config = new MinecraftServerConfig(data);
         File serverDir = new File(SERVERS_DIR + "/" + data.getName());
         serverDir.mkdirs();
         try {
+            serverInstallAction(data.getName(), "Spoofing Eula");
             File eula = new File(serverDir.getPath() + "/eula.txt");
             PrintWriter eulaPW = new PrintWriter(eula);
             eulaPW.println("eula=true");
             eulaPW.flush();
             eulaPW.close();
+            serverInstallAction(data.getName(), "Spoofing properties");
             File props = new File(serverDir.getPath() + "/server.properties");
             PrintWriter propsPW = new PrintWriter(props);
             propsPW.println("server-port=" + data.getPort());
             propsPW.flush();
             propsPW.close();
+            serverInstallAction(data.getName(), "Saving config");
             File configFile = new File(serverDir.getPath() + "/msu_config.json");
             ObjectWriter ow = new ObjectMapper().writerWithDefaultPrettyPrinter();
             ow.writeValue(configFile, config);
         } catch (IOException ignored) {}
+        serverInstallAction(data.getName(), "Downloading server");
         String download = serverVersions.get(data.getCategory()).get(data.getVersion()).getUrl();
         downloadServer(serverDir, download);
-        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction));
+        // TODO install ATM server properly
+        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction));
         if(config.isAutoStart()) servers.get(data.getName()).startServer();
-        return ResponseEntity.ok(CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, servers.get(serverDir.getName())));
+        serverInstallAction(data.getName(), "Installed");
     }
 
     @PostMapping("server/update")
@@ -234,6 +245,16 @@ public class MinecraftController {
 
     private void serverStatusAction(String name, Object status){
         MinecraftSocketMessage msm = new MinecraftSocketMessage("status", status, name);
+        webSocketService.sendMessage("/server/" + name, msm);
+    }
+
+    private void serverUpdateAction(String name, Object status){
+        MinecraftSocketMessage msm = new MinecraftSocketMessage("update", status, name);
+        webSocketService.sendMessage("/server/" + name, msm);
+    }
+
+    private void serverInstallAction(String name, Object status){
+        MinecraftSocketMessage msm = new MinecraftSocketMessage("install", status, name);
         webSocketService.sendMessage("/server/" + name, msm);
     }
 
