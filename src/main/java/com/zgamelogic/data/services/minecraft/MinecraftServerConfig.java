@@ -11,7 +11,6 @@ public class MinecraftServerConfig {
     private String version;
     private String category;
     private String startCommand;
-    private String updateScript;
 
     public MinecraftServerConfig(MinecraftServerCreationData data){
         autoStart = data.getAutoStart();
@@ -19,6 +18,5 @@ public class MinecraftServerConfig {
         version = data.getVersion();
         category = data.getCategory();
         startCommand = data.getStartCommand();
-        updateScript = data.getUpdateScript();
     }
 }

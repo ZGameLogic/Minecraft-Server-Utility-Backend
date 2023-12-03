@@ -23,8 +23,6 @@ public class MinecraftServerCreationData {
     private String category;
     @NotNull(message = "startCommand is required")
     private String startCommand;
-    @NotNull(message = "updateScript is required")
-    private String updateScript;
 
     @NotNull(message = "port is required")
     @Min(value = 25500, message = MC_SERVER_CREATE_PORT_RANGE)

@@ -189,21 +189,9 @@ public class MinecraftController {
             }
             startScriptAndBlock("startserver.bat", serverDir); // run script to install new forge
             serverInstallAction(data.getName(), "Fixing run.bat");
-            File runbat = new File(serverDir.getPath() + "/run.bat");
-            StringBuilder newRunBat = new StringBuilder();
+            File runbat = new File(serverDir.getPath() + "\\run.bat");
             try {
-                Scanner in = new Scanner(runbat);
-                while(in.hasNextLine()){
-                    String line = in.nextLine();
-                    if(line.startsWith("java")) {
-                        line.replace("%*", "nogui %*");
-                    }
-                    newRunBat.append(line).append("\n");
-                }
-                in.close();
-                PrintWriter out = new PrintWriter(runbat);
-                out.println(newRunBat);
-                out.close();
+                editRunBat(runbat);
             } catch (FileNotFoundException ignored) {}
         }
         servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction));
@@ -213,7 +201,7 @@ public class MinecraftController {
 
     @PostMapping("server/update")
     private void updateServer(@RequestBody MinecraftServerUpdateCommand updateCommand){
-        servers.get(updateCommand.getServer()).updateServerVersion(serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
+        servers.get(updateCommand.getServer()).updateServerVersion(updateCommand.getVersion(), serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
     }
 
     @ResponseBody
@@ -293,6 +281,7 @@ public class MinecraftController {
 
     private void serverUpdateAction(String name, Object status){
         MinecraftSocketMessage msm = new MinecraftSocketMessage("update", status, name);
+        log.info(status.toString());
         webSocketService.sendMessage("/server/" + name, msm);
     }
 
