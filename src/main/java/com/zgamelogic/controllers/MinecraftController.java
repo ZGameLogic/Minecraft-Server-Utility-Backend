@@ -25,11 +25,13 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 
 import static com.zgamelogic.data.Constants.*;
+import static com.zgamelogic.services.BackendService.*;
 import static com.zgamelogic.services.MinecraftService.downloadServer;
 
 @Slf4j
@@ -162,7 +164,44 @@ public class MinecraftController {
         serverInstallAction(data.getName(), "Downloading server");
         String download = serverVersions.get(data.getCategory()).get(data.getVersion()).getUrl();
         downloadServer(serverDir, download);
-        // TODO install ATM server properly
+        if(data.getCategory().contains("ATM9")){
+            serverInstallAction(data.getName(), "Extracting server files");
+            unzipFile(serverDir + "/server.jar"); // unzip download
+            new File(serverDir + "/server.jar").delete(); // delete download
+            unfoldDir(findDir(serverDir)); // unfold download
+            serverInstallAction(data.getName(), "Installing forge");
+            File startServerBat = new File(serverDir + "/startserver.bat");
+            StringBuilder newStartServerBat = new StringBuilder();
+            try{
+                Scanner in = new Scanner(startServerBat);
+                while(in.hasNextLine()) newStartServerBat.append(in.nextLine().replace("goto:START", "")).append("\n");
+                in.close();
+                PrintWriter out = new PrintWriter(startServerBat);
+                out.println(newStartServerBat);
+                out.flush();
+                out.close();
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+            startScriptAndBlock("startserver.bat", serverDir); // run script to install new forge
+            serverInstallAction(data.getName(), "Fixing run.bat");
+            File runbat = new File(serverDir.getPath() + "/run.bat");
+            StringBuilder newRunBat = new StringBuilder();
+            try {
+                Scanner in = new Scanner(runbat);
+                while(in.hasNextLine()){
+                    String line = in.nextLine();
+                    if(line.startsWith("java")) {
+                        line.replace("%*", "nogui %*");
+                    }
+                    newRunBat.append(line).append("\n");
+                }
+                in.close();
+                PrintWriter out = new PrintWriter(runbat);
+                out.println(newRunBat);
+                out.close();
+            } catch (FileNotFoundException ignored) {}
+        }
         servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction));
         if(config.isAutoStart()) servers.get(data.getName()).startServer();
         serverInstallAction(data.getName(), "Installed");

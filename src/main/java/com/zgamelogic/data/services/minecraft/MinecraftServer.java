@@ -15,6 +15,7 @@ import java.util.LinkedList;
 import java.util.Scanner;
 
 import static com.zgamelogic.data.Constants.*;
+import static com.zgamelogic.services.BackendService.startScriptAndBlock;
 import static com.zgamelogic.services.MinecraftService.downloadServer;
 
 @SuppressWarnings("unused")
@@ -166,7 +167,8 @@ public class MinecraftServer {
             updateMessage("Downloading server", 0.0);
             downloadServer(tempDir, download); // download server to temp dir
             updateMessage("Unpacking server", 0.17);
-            startScriptAndBlock("tar -xf server.jar"); // unzip download in temp dir
+            // TODO unpack
+            // TODO delete libraries
             new File(tempDir.getPath() + "/server.jar").delete(); // delete download
             updateMessage("Backing up old server", 0.34);
             for(File file: tempDir.listFiles()){ // move files that exist in both tempDir and serverDir to backDir
@@ -184,9 +186,13 @@ public class MinecraftServer {
                     Files.move(newF.toPath(), new File(serverDir.getPath() + "/" + newF.getName()).toPath());
                 } catch (IOException ignored) {}
             }
-            // TODO work the configs
+            for(File file: new File(tempDir.getPath() + "/config").listFiles()){
+                try {
+                    Files.move(file.toPath(), new File(serverDir.getPath() + "/config/" + file.getName()).toPath());
+                } catch (IOException ignored) {}
+            }
             updateMessage("Installing forge", 0.68);
-            startScriptAndBlock("startserver.bat"); // run script to install new forge
+            startScriptAndBlock("startserver.bat", filePath); // run script to install new forge
             updateMessage("Messing with some properties", 0.85);
             File runbat = new File(serverDir.getPath() + "/run.bat");
             StringBuilder newRunBat = new StringBuilder();
@@ -303,6 +309,7 @@ public class MinecraftServer {
                 String value = spaces.length > 1 ? line.split("=")[1] : "";
                 serverProperties.put(key.trim(), value.trim());
             }
+            input.close();
         } catch (FileNotFoundException e) {
             log.error("Error reloading server data", e);
         }
@@ -341,17 +348,5 @@ public class MinecraftServer {
         vals.put("stage", stage);
         vals.put("percentage", percentage + "");
         updateAction.action(name, vals);
-    }
-
-    private void startScriptAndBlock(String scriptName){
-            ProcessBuilder pb = new ProcessBuilder();
-            pb.directory(new File(filePath));
-            pb.command(scriptName.split(" "));
-            try {
-                Process update = pb.start();
-                while (update.isAlive()) {
-                    Thread.sleep(250);
-                }
-            } catch (IOException | InterruptedException ignored) {}
     }
 }
