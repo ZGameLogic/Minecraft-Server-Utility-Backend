@@ -174,7 +174,11 @@ public class MinecraftController {
             StringBuilder newStartServerBat = new StringBuilder();
             try{
                 Scanner in = new Scanner(startServerBat);
-                while(in.hasNextLine()) newStartServerBat.append(in.nextLine().replace("goto:START", "")).append("\n");
+                while(in.hasNextLine()) {
+                    String line = in.nextLine();
+                    if(line.startsWith(":START")) break;
+                    newStartServerBat.append(line).append("\n");
+                }
                 in.close();
                 PrintWriter out = new PrintWriter(startServerBat);
                 out.println(newStartServerBat);

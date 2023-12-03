@@ -15,7 +15,8 @@ import java.util.LinkedList;
 import java.util.Scanner;
 
 import static com.zgamelogic.data.Constants.*;
-import static com.zgamelogic.services.BackendService.startScriptAndBlock;
+import static com.zgamelogic.services.BackendService.*;
+import static com.zgamelogic.services.BackendService.findDir;
 import static com.zgamelogic.services.MinecraftService.downloadServer;
 
 @SuppressWarnings("unused")
@@ -89,7 +90,12 @@ public class MinecraftServer {
         log.debug("Starting " + name);
         ProcessBuilder pb = new ProcessBuilder();
         pb.directory(new File(filePath));
-        pb.command(serverConfig.getStartCommand().split(" "));
+        if(serverConfig.getStartCommand().endsWith(".bat")){
+            String bat = new File(filePath).getAbsolutePath() + "/" + serverConfig.getStartCommand();
+            pb.command(bat);
+        } else {
+            pb.command(serverConfig.getStartCommand().split(" "));
+        }
         try {
             serverProcess = pb.start();
             processOutput = new BufferedReader(new InputStreamReader(serverProcess.getInputStream()));
@@ -167,8 +173,8 @@ public class MinecraftServer {
             updateMessage("Downloading server", 0.0);
             downloadServer(tempDir, download); // download server to temp dir
             updateMessage("Unpacking server", 0.17);
-            // TODO unpack
-            // TODO delete libraries
+            unzipFile(tempDir + "/server.jar"); // unzip download
+            unfoldDir(findDir(tempDir)); // unfold download
             new File(tempDir.getPath() + "/server.jar").delete(); // delete download
             updateMessage("Backing up old server", 0.34);
             for(File file: tempDir.listFiles()){ // move files that exist in both tempDir and serverDir to backDir
@@ -191,6 +197,7 @@ public class MinecraftServer {
                     Files.move(file.toPath(), new File(serverDir.getPath() + "/config/" + file.getName()).toPath());
                 } catch (IOException ignored) {}
             }
+            new File(filePath + "\\libraries").delete();
             updateMessage("Installing forge", 0.68);
             startScriptAndBlock("startserver.bat", filePath); // run script to install new forge
             updateMessage("Messing with some properties", 0.85);
