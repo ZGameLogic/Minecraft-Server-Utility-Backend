@@ -65,7 +65,7 @@ public abstract class MinecraftService {
         serverVersions.forEach((category, versions) -> {
             LinkedList<MinecraftServerVersion> versionList = new LinkedList<>(versions.values());
             Collections.sort(versionList);
-            versionMap.put(category, versionList.getFirst().getVersion());
+            if(!versionList.getFirst().getVersion().isEmpty()) versionMap.put(category, versionList.getFirst().getVersion());
         });
         return versionMap;
     }
