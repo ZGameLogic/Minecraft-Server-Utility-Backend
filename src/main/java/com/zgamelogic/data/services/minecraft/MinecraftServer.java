@@ -160,15 +160,15 @@ public class MinecraftServer {
         blockThreadUntilOffline();
         status = MC_SERVER_UPDATING;
         if(serverConfig.getCategory().equals("vanilla")) {
-            updateVanillaServer(download);
+            updateVanillaServer(download, version);
         } else if(serverConfig.getCategory().contains("ATM9")) {
-            updateATM9Server(download);
+            updateATM9Server(download, version);
         }
         serverConfig.setVersion(version);
         saveServerConfig();
     }
 
-    private void updateATM9Server(String download){
+    private void updateATM9Server(String download, String version){
         new Thread(() -> {
             File serverDir = new File(filePath);
             File tempDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-temp");
@@ -212,6 +212,7 @@ public class MinecraftServer {
             try { editRunBat(runbat); } catch (FileNotFoundException ignored) {}
             FileSystemUtils.deleteRecursively(tempDir); // remove temp dir
             FileSystemUtils.deleteRecursively(backDir); // remove back dir
+            setServerProperty("motd", "All the Mods 9\\: " + version.split("-")[2]);
             updateMessage("Finished updating server", 1.0);
             if(getServerConfig().isAutoStart()){
                 startServer();
@@ -221,7 +222,7 @@ public class MinecraftServer {
         }, "Update").start();
     }
 
-    private void updateVanillaServer(String download){
+    private void updateVanillaServer(String download, String version){
         new Thread(() -> {
             File serverDir = new File(filePath);
             File serverJar = new File(filePath + "/server.jar");
@@ -229,6 +230,7 @@ public class MinecraftServer {
             serverJar.delete();
             updateMessage("Downloading new server", 0.5);
             downloadServer(serverDir, download);
+            setServerProperty("motd", "Vanilla\\: " + version);
             updateMessage("Complete", 1.0);
             if(getServerConfig().isAutoStart()){
                 startServer();
