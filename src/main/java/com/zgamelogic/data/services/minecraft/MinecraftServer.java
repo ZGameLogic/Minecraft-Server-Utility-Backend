@@ -7,6 +7,7 @@ import com.zgamelogic.data.minecraft.MinecraftServerSocketAction;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.FileSystemUtils;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -153,22 +154,27 @@ public class MinecraftServer {
         processInput.flush();
     }
 
-    public void updateServerVersion(String download){
+    public void updateServerVersion(String version, String download){
+        log.info("Updating " + name + " to " + version);
         if(status.equals(MC_SERVER_ONLINE)) stopServer();
         blockThreadUntilOffline();
         status = MC_SERVER_UPDATING;
-        if(serverConfig.getVersion().equals("vanilla")) {
+        if(serverConfig.getCategory().equals("vanilla")) {
             updateVanillaServer(download);
-        } else if(serverConfig.getVersion().contains("ATM9")) {
+        } else if(serverConfig.getCategory().contains("ATM9")) {
             updateATM9Server(download);
         }
+        serverConfig.setVersion(version);
+        saveServerConfig();
     }
 
     private void updateATM9Server(String download){
         new Thread(() -> {
+            log.info("Starting update thread");
             File serverDir = new File(filePath);
             File tempDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-temp");
             File backDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-backup");
+            backDir.mkdirs();
             tempDir.mkdirs(); // create temp dir
             updateMessage("Downloading server", 0.0);
             downloadServer(tempDir, download); // download server to temp dir
@@ -186,11 +192,13 @@ public class MinecraftServer {
             }
             updateMessage("Moving files", 0.51);
             for(File file: tempDir.listFiles()){ // move files from temp dir to server dir
-                File newF = new File(serverDir.getPath() + "/" + file.getName());
+                File newF = new File(serverDir.getPath() + "\\" + file.getName());
                 if(newF.getName().equals("config")) continue;
                 try {
-                    Files.move(newF.toPath(), new File(serverDir.getPath() + "/" + newF.getName()).toPath());
-                } catch (IOException ignored) {}
+                    Files.move(file.toPath(), newF.toPath());
+                } catch (IOException e) {
+                    log.error("error moving file", e);
+                }
             }
             for(File file: new File(tempDir.getPath() + "/config").listFiles()){
                 try {
@@ -201,24 +209,10 @@ public class MinecraftServer {
             updateMessage("Installing forge", 0.68);
             startScriptAndBlock("startserver.bat", filePath); // run script to install new forge
             updateMessage("Messing with some properties", 0.85);
-            File runbat = new File(serverDir.getPath() + "/run.bat");
-            StringBuilder newRunBat = new StringBuilder();
-            try {
-                Scanner in = new Scanner(runbat);
-                while(in.hasNextLine()){
-                    String line = in.nextLine();
-                    if(line.startsWith("java")) {
-                        line.replace("%*", "nogui %*");
-                    }
-                    newRunBat.append(line).append("\n");
-                }
-                in.close();
-                PrintWriter out = new PrintWriter(runbat);
-                out.println(newRunBat);
-                out.close();
-            } catch (FileNotFoundException ignored) {}
-            tempDir.delete(); // remove temp dir
-            backDir.delete(); // remove back dir
+            File runbat = new File(serverDir.getPath() + "\\run.bat");
+            try { editRunBat(runbat); } catch (FileNotFoundException ignored) {}
+            FileSystemUtils.deleteRecursively(tempDir); // remove temp dir
+            FileSystemUtils.deleteRecursively(backDir); // remove back dir
             updateMessage("Finished updating server", 1.0);
             if(getServerConfig().isAutoStart()){
                 startServer();
