@@ -1,25 +1,17 @@
 package com.zgamelogic.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zgamelogic.data.database.curseforge.CurseforgeProject;
 import com.zgamelogic.data.services.curseforge.CurseforgeMod;
-import com.zgamelogic.data.services.minecraft.MinecraftServerPingData;
 import com.zgamelogic.data.services.minecraft.MinecraftServerVersion;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public abstract class MinecraftService {
 
@@ -60,99 +52,21 @@ public abstract class MinecraftService {
     }
 
     public static void downloadServer(File dir, String link){
-        HttpHeaders headers = new HttpHeaders();
-        HttpEntity<String> entity = new HttpEntity<>(headers);
         RestTemplate restTemplate = new RestTemplate();
-        restTemplate.execute(link, HttpMethod.GET, requestCallback -> {
-            requestCallback.getHeaders().setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        }, clientHttpResponse -> {
+        restTemplate.execute(link, HttpMethod.GET, requestCallback ->
+                requestCallback.getHeaders().setContentType(MediaType.APPLICATION_OCTET_STREAM), clientHttpResponse -> {
             FileCopyUtils.copy(clientHttpResponse.getBody(), new FileOutputStream(dir.getPath() + "/server.jar"));
             return null;
         });
     }
 
-    public static MinecraftServerPingData pingServer(String url, int port){
-        final byte PACKET_HANDSHAKE = 0x00, PACKET_STATUSREQUEST = 0x00, PACKET_PING = 0x01;
-        final int STATUS_HANDSHAKE = 1;
-
-        int tries = 0;
-        while(tries < 3) {
-            try (Socket socket = new Socket()) {
-                socket.connect(new InetSocketAddress(url, port), 1000);
-                DataInputStream in = new DataInputStream(socket.getInputStream());
-                DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-
-                ByteArrayOutputStream handshake_bytes = new ByteArrayOutputStream();
-                DataOutputStream handshake = new DataOutputStream(handshake_bytes);
-
-                handshake.writeByte(PACKET_HANDSHAKE);
-                writeVarInt(handshake, 4);
-                writeVarInt(handshake, url.length());
-                handshake.writeBytes(url);
-                handshake.writeShort(port);
-                writeVarInt(handshake, STATUS_HANDSHAKE);
-
-                writeVarInt(out, handshake_bytes.size());
-                out.write(handshake_bytes.toByteArray());
-
-                out.writeByte(0x01);
-                out.writeByte(PACKET_STATUSREQUEST);
-
-                readVarInt(in);
-                int id = readVarInt(in);
-
-                int length = readVarInt(in);
-
-                byte[] data = new byte[length];
-                in.readFully(data);
-                ObjectMapper om = new ObjectMapper();
-                MinecraftServerPingData pingData = om.readValue(new String(data), MinecraftServerPingData.class);
-
-                out.writeByte(0x09);
-                out.writeByte(PACKET_PING);
-                out.writeLong(System.currentTimeMillis());
-
-                readVarInt(in);
-                id = readVarInt(in);
-
-                socket.close();
-                return pingData;
-            } catch (Exception e) {
-                tries++;
-                try {
-                    Thread.sleep(150);
-                } catch (InterruptedException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        }
-        return new MinecraftServerPingData();
-    }
-
-    private static void writeVarInt(DataOutputStream out, int paramInt) throws IOException {
-        while (true) {
-            if ((paramInt & 0xFFFFFF80) == 0) {
-                out.writeByte(paramInt);
-                return;
-            }
-            out.writeByte(paramInt & 0x7F | 0x80);
-            paramInt >>>= 7;
-        }
-    }
-
-    private static int readVarInt(DataInputStream in) throws IOException {
-        int i = 0;
-        int j = 0;
-        while (true) {
-            int k = in.readByte();
-            i |= (k & 0x7F) << j++ * 7;
-            if (j > 5) {
-                throw new RuntimeException("VarInt too big");
-            }
-            if ((k & 0x80) != 128) {
-                break;
-            }
-        }
-        return i;
+    public static HashMap<String, String> getNewestVersions(HashMap<String, HashMap<String, MinecraftServerVersion>> serverVersions){
+        HashMap<String, String> versionMap = new HashMap<>();
+        serverVersions.forEach((category, versions) -> {
+            LinkedList<MinecraftServerVersion> versionList = new LinkedList<>(versions.values());
+            Collections.sort(versionList);
+            versionMap.put(category, versionList.getFirst().getVersion());
+        });
+        return versionMap;
     }
 }
