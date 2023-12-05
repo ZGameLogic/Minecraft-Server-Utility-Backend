@@ -155,7 +155,7 @@ public class MinecraftServer {
     }
 
     public void updateServerVersion(String version, String download){
-        log.info("Updating " + name + " to " + version);
+        log.debug("Updating " + name + " to " + version);
         if(status.equals(MC_SERVER_ONLINE)) stopServer();
         blockThreadUntilOffline();
         status = MC_SERVER_UPDATING;
@@ -170,7 +170,6 @@ public class MinecraftServer {
 
     private void updateATM9Server(String download){
         new Thread(() -> {
-            log.info("Starting update thread");
             File serverDir = new File(filePath);
             File tempDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-temp");
             File backDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-backup");

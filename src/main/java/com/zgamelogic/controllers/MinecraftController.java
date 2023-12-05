@@ -24,10 +24,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.*;
 
 import static com.zgamelogic.data.Constants.*;
@@ -57,17 +54,19 @@ public class MinecraftController {
         serverVersions = new HashMap<>();
         servers = new HashMap<>();
         for(File server: SERVERS_DIR.listFiles()){
-            servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction));
+            if(server.isDirectory()) {
+                servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction));
+            }
         }
-        log.info("Starting minecraft auto-start servers...");
-        servers.values().stream().filter(mcServer -> mcServer.getServerConfig().isAutoStart())
-                .forEach(MinecraftServer::startServer);
     }
 
     @PostConstruct
     private void postConstruct(){
         updateServerVersions();
         thirtyMinuteTasks();
+        log.info("Starting minecraft auto-start servers...");
+        servers.values().stream().filter(mcServer -> mcServer.getServerConfig().isAutoStart())
+                .forEach(MinecraftServer::startServer);
     }
 
     @ResponseBody
@@ -256,19 +255,19 @@ public class MinecraftController {
 
     @Scheduled(cron = "0 */30 * * * *")
     private void thirtyMinuteTasks(){
-        log.info("Doing some upgrade stuff");
+        log.debug("Doing some upgrade stuff");
         HashMap<String, String> newestVersions = MinecraftService.getNewestVersions(serverVersions);
         servers.values().stream().filter(minecraftServer -> {
             if(!minecraftServer.getServerConfig().isAutoUpdate()) return false;
-            if(!minecraftServer.getServerConfig().getVersion().equals(newestVersions.get(minecraftServer.getServerConfig().getCategory()))) return false;
+            if(minecraftServer.getServerConfig().getVersion().equals(newestVersions.get(minecraftServer.getServerConfig().getCategory()))) return false;
             return minecraftServer.getPlayersOnline() == 0;
         }
         ).forEach(server -> {
-            log.info("Updating " + server.getName());
+            log.debug("Updating " + server.getName());
             String cat = server.getServerConfig().getCategory();
             String ver = newestVersions.get(cat);
             String download = serverVersions.get(cat).get(ver).getUrl();
-            server.updateServerVersion(download);
+            server.updateServerVersion(ver, download);
         });
     }
 
@@ -300,7 +299,6 @@ public class MinecraftController {
 
     private void serverUpdateAction(String name, Object status){
         MinecraftSocketMessage msm = new MinecraftSocketMessage("update", status, name);
-        log.info(status.toString());
         webSocketService.sendMessage("/server/" + name, msm);
     }
 
