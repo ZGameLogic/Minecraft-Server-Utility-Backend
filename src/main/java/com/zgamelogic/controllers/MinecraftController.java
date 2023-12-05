@@ -259,6 +259,7 @@ public class MinecraftController {
         HashMap<String, String> newestVersions = MinecraftService.getNewestVersions(serverVersions);
         servers.values().stream().filter(minecraftServer -> {
             if(!minecraftServer.getServerConfig().isAutoUpdate()) return false;
+            if(newestVersions.get(minecraftServer.getServerConfig().getCategory()).isEmpty()) return false;
             if(minecraftServer.getServerConfig().getVersion().equals(newestVersions.get(minecraftServer.getServerConfig().getCategory()))) return false;
             return minecraftServer.getPlayersOnline() == 0;
         }
