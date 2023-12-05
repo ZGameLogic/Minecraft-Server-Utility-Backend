@@ -53,11 +53,20 @@ public abstract class MinecraftService {
 
     public static void downloadServer(File dir, String link){
         RestTemplate restTemplate = new RestTemplate();
-        restTemplate.execute(link, HttpMethod.GET, requestCallback -> {
-            requestCallback.getHeaders().setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        }, clientHttpResponse -> {
+        restTemplate.execute(link, HttpMethod.GET, requestCallback ->
+                requestCallback.getHeaders().setContentType(MediaType.APPLICATION_OCTET_STREAM), clientHttpResponse -> {
             FileCopyUtils.copy(clientHttpResponse.getBody(), new FileOutputStream(dir.getPath() + "/server.jar"));
             return null;
         });
+    }
+
+    public static HashMap<String, String> getNewestVersions(HashMap<String, HashMap<String, MinecraftServerVersion>> serverVersions){
+        HashMap<String, String> versionMap = new HashMap<>();
+        serverVersions.forEach((category, versions) -> {
+            LinkedList<MinecraftServerVersion> versionList = new LinkedList<>(versions.values());
+            Collections.sort(versionList);
+            versionMap.put(category, versionList.getFirst().getVersion());
+        });
+        return versionMap;
     }
 }

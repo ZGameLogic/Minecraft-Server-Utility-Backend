@@ -67,6 +67,7 @@ public class MinecraftController {
     @PostConstruct
     private void postConstruct(){
         updateServerVersions();
+        thirtyMinuteTasks();
     }
 
     @ResponseBody
@@ -263,6 +264,24 @@ public class MinecraftController {
     @Scheduled(cron = "0 0 0 ? * *")
     private void updateServerVersions(){
         serverVersions = MinecraftService.getMinecraftServerVersions(curseforgeToken, curseforgeProjectRepository.findAll());
+    }
+
+    @Scheduled(cron = "0 */30 * * * *")
+    private void thirtyMinuteTasks(){
+        log.info("Doing some upgrade stuff");
+        HashMap<String, String> newestVersions = MinecraftService.getNewestVersions(serverVersions);
+        servers.values().stream().filter(minecraftServer -> {
+            if(!minecraftServer.getServerConfig().isAutoUpdate()) return false;
+            if(!minecraftServer.getServerConfig().getVersion().equals(newestVersions.get(minecraftServer.getServerConfig().getCategory()))) return false;
+            return minecraftServer.getPlayersOnline() == 0;
+        }
+        ).forEach(server -> {
+            log.info("Updating " + server.getName());
+            String cat = server.getServerConfig().getCategory();
+            String ver = newestVersions.get(cat);
+            String download = serverVersions.get(cat).get(ver).getUrl();
+            server.updateServerVersion(download);
+        });
     }
 
     private boolean checkOpenServerName(String name){
