@@ -187,7 +187,7 @@ public class MinecraftController {
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
             }
-            startScriptAndBlock("startserver.bat", serverDir); // run script to install new forge
+            startScriptAndBlock("startserver.bat", serverDir, 60L); // run script to install new forge
             serverInstallAction(data.getName(), "Fixing run.bat");
             File runbat = new File(serverDir.getPath() + "\\run.bat");
             try {
