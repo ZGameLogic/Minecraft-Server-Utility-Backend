@@ -87,7 +87,10 @@ public class MinecraftServer {
     }
 
     public void startServer(){
-        if(!status.equals(MC_SERVER_OFFLINE) && !status.equals(MC_SERVER_CRASHED)) return;
+        if(status.equals(MC_SERVER_STARTING) ||
+                status.equals(MC_SERVER_ONLINE) ||
+                status.equals(MC_SERVER_STOPPING) ||
+                status.equals(MC_SERVER_UPDATING)) return;
         status = MC_SERVER_STARTING;
         log.debug("Starting " + name);
         ProcessBuilder pb = new ProcessBuilder();
@@ -163,8 +166,6 @@ public class MinecraftServer {
         } else if(serverConfig.getCategory().contains("ATM9")) {
             updateATM9Server(download, version);
         }
-        serverConfig.setVersion(version);
-        saveServerConfig();
     }
 
     private void updateATM9Server(String download, String version){
@@ -213,11 +214,10 @@ public class MinecraftServer {
             FileSystemUtils.deleteRecursively(backDir); // remove back dir
             setServerProperty("motd", "All the Mods 9\\: " + version.split("-")[2]);
             updateMessage("Finished updating server", 1.0);
-            if(getServerConfig().isAutoStart()){
-                startServer();
-            } else {
-                status = MC_SERVER_OFFLINE;
-            }
+            serverConfig.setVersion(version);
+            saveServerConfig();
+            status = MC_SERVER_OFFLINE;
+            if(getServerConfig().isAutoStart()) startServer();
         }, "Update").start();
     }
 
@@ -237,11 +237,10 @@ public class MinecraftServer {
             setServerProperty("motd", "Vanilla\\: " + version);
             l.info("Complete");
             updateMessage("Complete", 1.0);
-            if(getServerConfig().isAutoStart()){
-                startServer();
-            } else {
-                status = MC_SERVER_OFFLINE;
-            }
+            serverConfig.setVersion(version);
+            saveServerConfig();
+            status = MC_SERVER_OFFLINE;
+            if(getServerConfig().isAutoStart()) startServer();
         }, "Update").start();
     }
 
