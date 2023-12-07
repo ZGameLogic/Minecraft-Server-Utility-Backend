@@ -43,7 +43,7 @@ public class SimpleLogger {
         try {
             Files.writeString(
                 logFile.toPath(),
-                "\n" + line,
+                line + "\n",
                 StandardOpenOption.APPEND,
                 StandardOpenOption.CREATE
             );
