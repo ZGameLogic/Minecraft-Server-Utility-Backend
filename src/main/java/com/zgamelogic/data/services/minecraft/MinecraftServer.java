@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.zgamelogic.data.minecraft.MinecraftServerSocketAction;
+import com.zgamelogic.data.minecraft.SimpleLogger;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -222,13 +223,19 @@ public class MinecraftServer {
 
     private void updateVanillaServer(String download, String version){
         new Thread(() -> {
+            File loggerFile = new File(filePath + "\\msu_update.log");
+            if(loggerFile.exists()) loggerFile.delete();
+            SimpleLogger l = new SimpleLogger(loggerFile);
             File serverDir = new File(filePath);
             File serverJar = new File(filePath + "/server.jar");
+            l.info("Deleting old jar");
             updateMessage("Deleting old jar", 0.0);
             serverJar.delete();
             updateMessage("Downloading new server", 0.5);
+            l.info("Downloading new server");
             downloadServer(serverDir, download);
             setServerProperty("motd", "Vanilla\\: " + version);
+            l.info("Complete");
             updateMessage("Complete", 1.0);
             if(getServerConfig().isAutoStart()){
                 startServer();
