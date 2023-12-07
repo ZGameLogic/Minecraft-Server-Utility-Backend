@@ -1,5 +1,6 @@
 package com.zgamelogic.services;
 
+import com.zgamelogic.data.minecraft.SimpleLogger;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.util.StreamUtils;
@@ -7,6 +8,7 @@ import org.springframework.util.StreamUtils;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -18,7 +20,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 public abstract class BackendService {
 
     /**
-     * @param script cmd line or bat to run
+     * @param script bat to run
      * @param filePath path to run script in
      */
     public static void startScriptAndBlock(String script, String filePath){
@@ -26,24 +28,63 @@ public abstract class BackendService {
     }
 
     /**
-     * @param script cmd line or bat to run
+     * @param script bat to run
      * @param dir dir to run the process in
      */
     public static void startScriptAndBlock(String script, File dir){
+        startScriptAndBlock(script, dir, null);
+    }
+
+    /**
+     * @param script bat to run
+     * @param filePath path to run script in
+     * @param timeout timeout in seconds. if the process takes longer than this timeout, kill it
+     */
+    public static void startScriptAndBlock(String script, String filePath, Long timeout){
+        startScriptAndBlock(script, new File(filePath), timeout);
+    }
+
+    /**
+     * @param script bat to run
+     * @param dir dir to run the process in
+     * @param timeout timeout in seconds. if the process takes longer than this timeout, kill it
+     */
+    public static void startScriptAndBlock(String script, File dir, Long timeout){
         ProcessBuilder pb = new ProcessBuilder();
         pb.directory(dir).command(dir.getAbsolutePath() + "\\" + script);
         log.debug(Strings.join(pb.command(), ' '));
+        File loggerFile = new File(dir.getAbsolutePath() + "\\msu_update.log");
+        if(loggerFile.exists()) loggerFile.delete();
+        SimpleLogger l = new SimpleLogger(loggerFile);
+        l.info("Starting update process");
         try {
             Process update = pb.start();
+            new Thread(() -> {
+                Instant kill = Instant.now().plusSeconds(timeout);
+                while(update.isAlive()){
+                    Instant now = Instant.now();
+                    if(now.isAfter(kill)) {
+                        l.error("Killing process, took more than " + timeout + " seconds.");
+                        update.destroyForcibly();
+                    }
+                    sleep(1000);
+                }
+            }, "cmd watch");
             BufferedReader input = new BufferedReader(new InputStreamReader(update.getInputStream()));
             BufferedReader error = new BufferedReader(new InputStreamReader(update.getErrorStream()));
             while (update.isAlive()) {
-                log.debug(input.readLine());
+                String line = input.readLine();
+                if(line != null) {
+                    l.info(line);
+                    log.debug(line);
+                }
             }
             String line;
             while((line = error.readLine()) != null){
+                l.error(line);
                 log.error(line);
             }
+            l.info("Finishing update script");
         } catch (IOException e) {
             log.error("Error running script", e);
         }
@@ -148,5 +189,15 @@ public abstract class BackendService {
         out.println(newRunBat);
         out.flush();
         out.close();
+    }
+
+    /**
+     * Sleeps thread for certain amount of milliseconds. Thread safe.
+     * @param milliseconds Milliseconds to sleep thread for.
+     */
+    public static void sleep(long milliseconds){
+        try {
+            Thread.sleep(milliseconds);
+        } catch (InterruptedException ignored) {}
     }
 }

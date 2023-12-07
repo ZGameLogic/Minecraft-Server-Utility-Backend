@@ -118,9 +118,7 @@ public class MinecraftServer {
         new Thread(() -> {
             stopServer();
             while(!status.equals(MC_SERVER_OFFLINE)) {
-                try {
-                    Thread.sleep(250);
-                } catch (InterruptedException ignored) {}
+                sleep(250);
             }
             startServer();
         }, "restart").start();
@@ -206,7 +204,7 @@ public class MinecraftServer {
             }
             new File(filePath + "\\libraries").delete();
             updateMessage("Installing forge", 0.68);
-            startScriptAndBlock("startserver.bat", filePath); // run script to install new forge
+            startScriptAndBlock("startserver.bat", filePath, 60L); // run script to install new forge
             updateMessage("Messing with some properties", 0.85);
             File runbat = new File(serverDir.getPath() + "\\run.bat");
             try { editRunBat(runbat); } catch (FileNotFoundException ignored) {}
@@ -287,9 +285,7 @@ public class MinecraftServer {
         new Thread(() -> { // Thread for watching server status.
             String currentStatus = status;
             while(true){
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ignored) {}
+                sleep(1000);
                 if(currentStatus.equals(status)) continue;
                 currentStatus = status;
                 statusAction.action(name, status);
@@ -339,9 +335,7 @@ public class MinecraftServer {
 
     private void blockThreadUntilOffline(){
         while(!status.equals(MC_SERVER_OFFLINE)) {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException ignored) {}
+            sleep(100);
         }
     }
 

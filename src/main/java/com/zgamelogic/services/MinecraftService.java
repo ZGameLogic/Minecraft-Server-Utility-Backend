@@ -15,6 +15,12 @@ import java.util.*;
 
 public abstract class MinecraftService {
 
+    /**
+     * This method retrieves different versions of Minecraft servers.
+     * @param curseforgeToken  The CurseForge token, provided as a string.
+     * @param projects A list of CurseForgeProject instances.
+     * @return A map (keyed by category name) that contains server versions for each provided project.
+     */
     public static HashMap<String, HashMap<String, MinecraftServerVersion>> getMinecraftServerVersions(String curseforgeToken, List<CurseforgeProject> projects){
         HashMap<String, HashMap<String, MinecraftServerVersion>> versions = new HashMap<>();
         HashMap<String, MinecraftServerVersion> vanillaVersions = new HashMap<>();
@@ -51,6 +57,11 @@ public abstract class MinecraftService {
         return versions;
     }
 
+    /**
+     * This method downloads a Minecraft server using the provided directory and link.
+     * @param dir  The target directory for the server files.
+     * @param link The link to the Minecraft server.
+     */
     public static void downloadServer(File dir, String link){
         RestTemplate restTemplate = new RestTemplate();
         restTemplate.execute(link, HttpMethod.GET, requestCallback ->
@@ -60,6 +71,11 @@ public abstract class MinecraftService {
         });
     }
 
+    /**
+     * This method gets the newest versions of the Minecraft servers from a provided map.
+     * @param serverVersions A map that contains server versions for each server.
+     * @return A map (keyed by category name) of the newest server versions.
+     */
     public static HashMap<String, String> getNewestVersions(HashMap<String, HashMap<String, MinecraftServerVersion>> serverVersions){
         HashMap<String, String> versionMap = new HashMap<>();
         serverVersions.forEach((category, versions) -> {
