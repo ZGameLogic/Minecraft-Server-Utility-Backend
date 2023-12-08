@@ -250,20 +250,17 @@ public class MinecraftServer {
             loadServerProperties();
         } else if(line.contains("Stopping server")){
             status = MC_SERVER_STOPPING;
-        } else if(line.matches(MC_JOIN_GAME_REGEX)){
+        } else if(line.endsWith(" joined the game") && !line.contains("<") && !line.contains(">")){
             online.add(extractUsername(line));
             playerAction.action(name, new MinecraftServerPlayersPacket(online));
-        } else if(line.matches(MC_LEFT_GAME_REGEX)){
+        } else if(line.endsWith(" left the game") && !line.contains("<") && !line.contains(">")){
             online.remove(extractUsername(line));
             playerAction.action(name, new MinecraftServerPlayersPacket(online));
         }
     }
 
     private String extractUsername(String line){
-        return line
-                .replaceAll("\\[.*] \\[Server thread/INFO]: ", "")
-                .replaceAll(" .*$", "")
-                .replaceAll("[<>]", "");
+        return line.split(":")[3].trim().split(" ")[0];
     }
 
     public int getPlayersOnline(){

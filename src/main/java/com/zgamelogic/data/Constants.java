@@ -9,8 +9,6 @@ public abstract class Constants {
     public final static String MC_SERVER_CRASHED = "Crashed";
     public final static String MC_SERVER_UPDATING = "Updating";
 
-    public final static String MC_JOIN_GAME_REGEX = "\\[.*] \\[Server thread/INFO](|( \\[net.minecraft.server.MinecraftServer/])): ([^\\[<].*?) joined the game$";
-    public final static String MC_LEFT_GAME_REGEX = "\\[.*] \\[Server thread/INFO](|( \\[net.minecraft.server.MinecraftServer/])): ([^\\[<].*?) left the game$";
     public final static String MC_NAME_REGEX = "^[a-zA-Z0-9]*$";
 
     public final static String MC_SERVER_CREATE_SUCCESS = "Server created successfully.";
