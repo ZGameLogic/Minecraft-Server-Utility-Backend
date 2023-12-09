@@ -12,6 +12,8 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+
 import static com.zgamelogic.data.Constants.MC_CREATE_SERVER_PERMISSION;
 import static com.zgamelogic.data.Constants.MC_USER_MANAGEMENT_PERMISSION;
 import static com.zgamelogic.services.DiscordService.*;
@@ -56,5 +58,10 @@ public class AuthenticationController {
         } catch (Exception e){
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    @GetMapping("user/permissions/{id}")
+    private ResponseEntity<HashMap<String, String>> userPermissions(@PathVariable String id){
+
     }
 }

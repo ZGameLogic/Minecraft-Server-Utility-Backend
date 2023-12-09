@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.zgamelogic.data.database.curseforge.CurseforgeProject;
 import com.zgamelogic.data.database.curseforge.CurseforgeProjectRepository;
+import com.zgamelogic.data.database.user.UserRepository;
 import com.zgamelogic.data.services.curseforge.CurseforgeMod;
 import com.zgamelogic.data.services.minecraft.*;
 import com.zgamelogic.data.services.minecraft.MinecraftSocketMessage;
@@ -44,11 +45,17 @@ public class MinecraftController {
 
     private final CurseforgeProjectRepository curseforgeProjectRepository;
     private final WebSocketService webSocketService;
+    private final UserRepository userRepository;
 
     @Autowired
-    private MinecraftController(CurseforgeProjectRepository curseforgeProjectRepository, WebSocketService webSocketService){
+    private MinecraftController(
+            CurseforgeProjectRepository curseforgeProjectRepository,
+            WebSocketService webSocketService,
+            UserRepository userRepository
+    ){
         this.webSocketService = webSocketService;
         this.curseforgeProjectRepository = curseforgeProjectRepository;
+        this.userRepository = userRepository;
         if(!SERVERS_DIR.exists()) SERVERS_DIR.mkdirs();
         serverVersions = new HashMap<>();
         servers = new HashMap<>();
