@@ -36,8 +36,7 @@ import static com.zgamelogic.services.MinecraftService.downloadServer;
 @PropertySource("File:msu.properties")
 public class MinecraftController {
 
-    @Value("${curseforge.token}")
-    private String curseforgeToken;
+    @Value("${curseforge.token}") private String curseforgeToken;
 
     private final static File SERVERS_DIR = new File("data/servers");
     private final HashMap<String, MinecraftServer> servers;
