@@ -12,6 +12,8 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import static com.zgamelogic.data.Constants.MC_CREATE_SERVER_PERMISSION;
+import static com.zgamelogic.data.Constants.MC_USER_MANAGEMENT_PERMISSION;
 import static com.zgamelogic.services.DiscordService.*;
 
 @Slf4j
@@ -45,7 +47,10 @@ public class AuthenticationController {
                 databaseUser.updateUser(user);
                 userRepository.save(databaseUser);
             } else {
-                userRepository.save(new User(user));
+                User databaseUser = new User(user);
+                databaseUser.addPermission("General Permissions", MC_CREATE_SERVER_PERMISSION);
+                databaseUser.addPermission("General Permissions", MC_USER_MANAGEMENT_PERMISSION);
+                userRepository.save(databaseUser);
             }
             return ResponseEntity.ok(new MSUUser(user, token));
         } catch (Exception e){
