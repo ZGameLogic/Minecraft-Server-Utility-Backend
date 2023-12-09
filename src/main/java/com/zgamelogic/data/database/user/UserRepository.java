@@ -8,6 +8,6 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, String> {
 
-    @Query(value = "SELECT * FROM \"msu_users\" u WHERE u.\"session_token\" = :token", nativeQuery = true)
-    Optional<User> findUserBySessionToken(@Param("token") String token);
+    @Query(value = "SELECT u FROM User u WHERE u.token = :token and u.refreshToken = :refresh")
+    Optional<User> findUserBySessionAndRefreshToken(@Param("token") String token, @Param("refresh") String refreshToken);
 }

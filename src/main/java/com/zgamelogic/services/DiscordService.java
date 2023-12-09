@@ -28,6 +28,22 @@ public abstract class DiscordService {
         return response.getBody();
     }
 
+    public static DiscordToken refreshToken(String refreshToken, String clientId, String clientSecret){
+        String url = "https://discord.com/api/oauth2/token";
+        HttpHeaders headers = new HttpHeaders();
+        RestTemplate restTemplate = new RestTemplate();
+        headers.add("Content-Type", "application/x-www-form-urlencoded");
+        headers.add("Accept-Encoding", "application/x-www-form-urlencoded");
+
+        MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+        requestBody.add("client_id", clientId);
+        requestBody.add("client_secret", clientSecret);
+        requestBody.add("grant_type", "refresh_token");
+        requestBody.add("refresh_token", refreshToken);
+        ResponseEntity<DiscordToken> response = restTemplate.exchange(url, HttpMethod.POST,  new HttpEntity<>(requestBody, headers), DiscordToken.class);
+        return response.getBody();
+    }
+
     public static DiscordUser getUserFromToken(String token){
         String url = "https://discord.com/api/users/@me";
         RestTemplate restTemplate = new RestTemplate();
