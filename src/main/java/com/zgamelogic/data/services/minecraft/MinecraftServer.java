@@ -205,6 +205,23 @@ public class MinecraftServer {
                 } catch (IOException ignored) {}
             }
             new File(filePath + "\\libraries").delete();
+            File startServerBat = new File(serverDir + "/startserver.bat");
+            StringBuilder newStartServerBat = new StringBuilder();
+            try{
+                Scanner in = new Scanner(startServerBat);
+                while(in.hasNextLine()) {
+                    String line = in.nextLine();
+                    if(line.startsWith(":START")) break;
+                    newStartServerBat.append(line).append("\n");
+                }
+                in.close();
+                PrintWriter out = new PrintWriter(startServerBat);
+                out.println(newStartServerBat);
+                out.flush();
+                out.close();
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
             updateMessage("Installing forge", 0.68);
             startScriptAndBlock("startserver.bat", filePath, 60L); // run script to install new forge
             updateMessage("Messing with some properties", 0.85);

@@ -1,34 +1,50 @@
 package com.zgamelogic.data.database.user;
 
+import com.zgamelogic.data.services.discord.DiscordUser;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 @Data
 @Entity
+@ToString
 @NoArgsConstructor
 @Table(name = "msu_users")
 public class User {
 
     @Id
+    private String id;
     private String username;
-    private String password;
+    private String email;
     private Date lastLoggedIn;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    private List<String> permissions;
+    @ElementCollection
+    @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
+    @MapKeyColumn(name = "object_name")
+    @Column(name = "permissions")
+    private Map<String, String> permissions = new HashMap<>();
 
-    public User(String username, String password) {
-        this.username = username;
-        this.password = password;
+    public User(DiscordUser discordUser){
+        id = discordUser.getId();
+        username = discordUser.getUsername();
+        email = discordUser.getEmail();
+        lastLoggedIn = new Date();
+        permissions = new HashMap<>();
     }
 
-    public void addPermission(String...permission){
-        if(permissions == null) permissions = new LinkedList<>();
-        permissions.addAll(List.of(permission));
+    public void updateUser(DiscordUser discordUser){
+        username = discordUser.getUsername();
+        email = discordUser.getEmail();
+    }
+
+    public void addPermission(String obj, String perm){
+        if(permissions.containsKey(obj)){
+            permissions.put(obj, permissions.get(obj) + perm);
+        } else {
+            permissions.put(obj, perm);
+        }
     }
 }
