@@ -45,6 +45,8 @@ public class AuthenticationController {
                     postForToken(code, discordClientId, discordClientSecret, discordRedirectUrl) :
                     refreshToken(refreshToken, discordClientId, discordClientSecret);
             DiscordUser user = getUserFromToken(token.getAccess_token());
+            log.info("token " + token);
+            log.info("user " + user);
             if(userRepository.existsById(user.getId())){
                 User databaseUser = userRepository.getReferenceById(user.getId());
                 databaseUser.updateUser(user);
