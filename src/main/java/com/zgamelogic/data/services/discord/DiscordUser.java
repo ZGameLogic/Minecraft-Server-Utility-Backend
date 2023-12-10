@@ -1,10 +1,10 @@
 package com.zgamelogic.data.services.discord;
 
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-@Getter
+@Data
 @ToString
 @NoArgsConstructor
 public class DiscordUser {
