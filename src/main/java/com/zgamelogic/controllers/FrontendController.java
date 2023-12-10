@@ -9,10 +9,10 @@ public class FrontendController {
     @GetMapping({
             "/",
             "/create",
-            "/view/",
+            "/view/**",
             "/login/callback"
     })
     private String frontEnd(){
-        return "forward:index.html";
+        return "forward:/index.html";
     }
 }
