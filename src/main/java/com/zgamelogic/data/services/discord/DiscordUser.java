@@ -2,8 +2,10 @@ package com.zgamelogic.data.services.discord;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Getter
+@ToString
 @NoArgsConstructor
 public class DiscordUser {
     private String locale;

@@ -57,6 +57,7 @@ public class AuthenticationController {
             }
             return ResponseEntity.ok(new MSUUser(user, token));
         } catch (Exception e){
+            log.error("Error authenticating", e);
             return ResponseEntity.badRequest().build();
         }
     }
