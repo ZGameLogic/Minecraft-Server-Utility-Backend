@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static com.zgamelogic.data.Constants.MC_CREATE_SERVER_PERMISSION;
 import static com.zgamelogic.data.Constants.MC_USER_MANAGEMENT_PERMISSION;
@@ -61,9 +62,10 @@ public class AuthenticationController {
     }
 
     @GetMapping("user/permissions/{id}")
-    private ResponseEntity<Map<String, String>> userPermissions(@PathVariable String id){
-        System.out.println(userRepository.findById(id).get());
-        userRepository.getUserPermissions(id).forEach((key, val) -> System.out.println(key + "\t" + val));
-        return ResponseEntity.ok(userRepository.getUserPermissions(id));
+    private ResponseEntity<Map<String, String>> userPermissions(@PathVariable(required = false) String id){
+        Optional<User> optionalUser = userRepository.findById(id);
+        return optionalUser.map(
+                user -> ResponseEntity.ok(user.getPermissions()))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
     }
 }
