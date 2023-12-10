@@ -4,13 +4,13 @@ import com.zgamelogic.data.services.discord.DiscordUser;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.ToString;
 
 import java.util.*;
 
-@Slf4j
 @Data
 @Entity
+@ToString
 @NoArgsConstructor
 @Table(name = "msu_users")
 public class User {
