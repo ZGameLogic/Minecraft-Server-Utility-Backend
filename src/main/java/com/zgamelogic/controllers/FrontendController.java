@@ -10,7 +10,8 @@ public class FrontendController {
             "/",
             "/create",
             "/view/**",
-            "/login/callback"
+            "/login/callback",
+            "/users"
     })
     private String frontEnd(){
         return "forward:/index.html";

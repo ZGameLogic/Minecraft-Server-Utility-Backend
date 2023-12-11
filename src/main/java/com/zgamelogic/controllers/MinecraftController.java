@@ -77,38 +77,42 @@ public class MinecraftController {
 
     @ResponseBody
     @GetMapping({"/servers", "/servers/{server}"})
-    private Collection<MinecraftServer> getServers(@PathVariable(required = false) String server){
+    private Collection<MinecraftServer> getServers(
+            @PathVariable(required = false) String server
+    ){
         if(server == null) return servers.values();
         if(!servers.containsKey(server)) return List.of();
         return List.of(servers.get(server));
     }
 
     @ResponseBody
-    @GetMapping({"/server/log/", "/server/log/{server}"})
-    private Map<String, MinecraftServerLog> getServerLog(@PathVariable(required = false) String server){
-        HashMap<String, MinecraftServerLog> data = new HashMap<>();
-        LinkedList<MinecraftServer> servers = new LinkedList<>();
-        if(server != null){
-            servers.add(this.servers.get(server));
-        } else {
-            servers.addAll(this.servers.values());
-        }
-        servers.removeIf(s -> !s.getStatus().equals(MC_SERVER_ONLINE));
-        servers.forEach(s -> data.put(s.getName(), s.loadLog()));
-        return data;
+    @GetMapping("/server/log/{server}")
+    private ResponseEntity<MinecraftServerLog> getServerLog(
+            @PathVariable String server,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        if(!userRepository.userHasPermission(id, server, MC_USE_CONSOLE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
+        if(!servers.containsKey(server)) return ResponseEntity.status(404).build();
+        return ResponseEntity.ok(servers.get(server).loadLog());
     }
 
     @ResponseBody
     @GetMapping("/server/versions")
-    public HashMap<String, LinkedList<String>> getMinecraftServerVersions(){
+    public ResponseEntity<HashMap<String, LinkedList<String>>> getMinecraftServerVersions(@CookieValue(name = "user", required = false) String id){
+        if(!userRepository.userHasPermission(id, MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         HashMap<String, LinkedList<String>> data = new HashMap<>();
         serverVersions.forEach((key, value) -> data.put(key, new LinkedList<>(value.keySet())));
-        return data;
+        return ResponseEntity.ok(data);
     }
 
+    @SuppressWarnings("rawtypes")
     @PostMapping("server/command")
-    private void sendCommand(@RequestBody MinecraftServerStatusCommand command){
-        if(!servers.containsKey(command.server())) return;
+    private ResponseEntity sendCommand(
+            @RequestBody MinecraftServerStatusCommand command,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        if(!userRepository.userHasPermission(id, command.server(), MC_ISSUE_COMMANDS_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
+        if(!servers.containsKey(command.server())) ResponseEntity.status(404).build();
         switch (command.command()){
             case "restart":
                 servers.get(command.server()).restartServer();
@@ -120,11 +124,17 @@ public class MinecraftController {
                 servers.get(command.server()).startServer();
                 break;
         }
+        return ResponseEntity.status(200).build();
     }
 
     @ResponseBody
     @PostMapping("server/create/check")
-    private ResponseEntity<CompletionMessage> checkServerCreation(@Valid @RequestBody MinecraftServerCreationData data, BindingResult bindingResult){
+    private ResponseEntity<CompletionMessage> checkServerCreation(
+            @Valid @RequestBody MinecraftServerCreationData data,
+            BindingResult bindingResult,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        if(!userRepository.userHasPermission(id, MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         HashMap<String, String> failReasons = new HashMap<>();
         bindingResult.getFieldErrors().forEach(fieldError -> failReasons.put(fieldError.getField(), fieldError.getDefaultMessage()));
         if(data.getPort() != null && !checkOpenServerPort(data.getPort())) failReasons.put("port", MC_SERVER_CREATE_PORT_CONFLICT);
@@ -137,8 +147,13 @@ public class MinecraftController {
 
     @ResponseBody
     @PostMapping("server/create")
-    private ResponseEntity<CompletionMessage> createServer(@Valid @RequestBody MinecraftServerCreationData data, BindingResult bindingResult){
-        ResponseEntity<CompletionMessage> validationCheck = checkServerCreation(data, bindingResult);
+    private ResponseEntity<CompletionMessage> createServer(
+            @Valid @RequestBody MinecraftServerCreationData data,
+            BindingResult bindingResult,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        if(!userRepository.userHasPermission(id, MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
+        ResponseEntity<CompletionMessage> validationCheck = checkServerCreation(data, bindingResult, id);
         if(!validationCheck.getStatusCode().equals(HttpStatus.OK)) return validationCheck;
         new Thread(() -> installServer(data), "Install Server").start();
         return ResponseEntity.ok(CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, "Starting install process. Listen on the websocket for completion"));
@@ -205,22 +220,38 @@ public class MinecraftController {
         serverInstallAction(data.getName(), "Installed");
     }
 
+    @SuppressWarnings("rawtypes")
     @PostMapping("server/update")
-    private void updateServer(@RequestBody MinecraftServerUpdateCommand updateCommand){
+    private ResponseEntity updateServer(
+            @RequestBody MinecraftServerUpdateCommand updateCommand,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        if(!userRepository.userHasPermission(id, updateCommand.getServer(), MC_ISSUE_COMMANDS_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         servers.get(updateCommand.getServer()).updateServerVersion(updateCommand.getVersion(), serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
+        return ResponseEntity.status(200).build();
     }
 
     @ResponseBody
     @GetMapping("curseforge/project")
-    private CurseforgeMod getCurseforgeProject(@RequestBody CurseforgeProjectData data){
-        return CurseforgeService.getCurseforgeMod(curseforgeToken, data.getProjectId());
+    private ResponseEntity<CurseforgeMod> getCurseforgeProject(
+            @RequestBody CurseforgeProjectData data,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        if(!userRepository.userHasPermission(id, MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
+        return ResponseEntity.ok(CurseforgeService.getCurseforgeMod(curseforgeToken, data.getProjectId()));
     }
 
+    @SuppressWarnings("rawtypes")
     @PostMapping("curseforge/project")
-    private void addCurseforgeProject(@RequestBody CurseforgeProjectData data){
+    private ResponseEntity addCurseforgeProject(
+            @RequestBody CurseforgeProjectData data,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        if(!userRepository.userHasPermission(id, MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         CurseforgeMod project = CurseforgeService.getCurseforgeMod(curseforgeToken, data.getProjectId());
         curseforgeProjectRepository.save(new CurseforgeProject(data.getProjectId(), project.getName()));
         updateServerVersions();
+        return ResponseEntity.status(200).build();
     }
 
     @MessageMapping("/server/{server}")
@@ -228,6 +259,7 @@ public class MinecraftController {
             @DestinationVariable String server,
             MinecraftWebsocketDataRequest message
     ) {
+        if(!userRepository.userHasPermission(message.getUserId(), server, MC_ISSUE_COMMANDS_SERVER_PERMISSION)) return;
         if(!servers.containsKey(server)) return;
         MinecraftServer mcServer = servers.get(server);
         switch(message.getAction()){

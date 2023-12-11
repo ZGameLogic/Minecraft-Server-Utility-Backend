@@ -1,5 +1,6 @@
 package com.zgamelogic.data.database.user;
 
+import com.zgamelogic.data.services.auth.Permission;
 import com.zgamelogic.data.services.discord.DiscordUser;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -46,5 +47,14 @@ public class User {
         } else {
             permissions.put(obj, perm);
         }
+    }
+
+    public void addPermission(Permission permission){
+        addPermission(permission.getServer(), permission.getPermission());
+    }
+
+    public boolean hasPermission(String obj, String permission){
+        if(!permissions.containsKey(obj)) return false;
+        return permissions.get(obj).contains(permission);
     }
 }
