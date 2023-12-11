@@ -77,7 +77,11 @@ public class MinecraftController {
 
     @ResponseBody
     @GetMapping({"/servers", "/servers/{server}"})
-    private Collection<MinecraftServer> getServers(@PathVariable(required = false) String server){
+    private Collection<MinecraftServer> getServers(
+            @PathVariable(required = false) String server,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        // TODO dont send configs and stuff if they arent allowed to edit
         if(server == null) return servers.values();
         if(!servers.containsKey(server)) return List.of();
         return List.of(servers.get(server));
@@ -85,7 +89,11 @@ public class MinecraftController {
 
     @ResponseBody
     @GetMapping({"/server/log/", "/server/log/{server}"})
-    private Map<String, MinecraftServerLog> getServerLog(@PathVariable(required = false) String server){
+    private Map<String, MinecraftServerLog> getServerLog(
+            @PathVariable(required = false) String server,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        // TODO dont send the configs if they cant send console commands
         HashMap<String, MinecraftServerLog> data = new HashMap<>();
         LinkedList<MinecraftServer> servers = new LinkedList<>();
         if(server != null){
@@ -100,14 +108,19 @@ public class MinecraftController {
 
     @ResponseBody
     @GetMapping("/server/versions")
-    public HashMap<String, LinkedList<String>> getMinecraftServerVersions(){
+    public HashMap<String, LinkedList<String>> getMinecraftServerVersions(@CookieValue(name = "user", required = false) String id){
+        // TODO dont send the versions if they arent authorized to create servers
         HashMap<String, LinkedList<String>> data = new HashMap<>();
         serverVersions.forEach((key, value) -> data.put(key, new LinkedList<>(value.keySet())));
         return data;
     }
 
     @PostMapping("server/command")
-    private void sendCommand(@RequestBody MinecraftServerStatusCommand command){
+    private void sendCommand(
+            @RequestBody MinecraftServerStatusCommand command,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        // TODO dont let them send commands if they arent able to send commands
         if(!servers.containsKey(command.server())) return;
         switch (command.command()){
             case "restart":
@@ -124,7 +137,12 @@ public class MinecraftController {
 
     @ResponseBody
     @PostMapping("server/create/check")
-    private ResponseEntity<CompletionMessage> checkServerCreation(@Valid @RequestBody MinecraftServerCreationData data, BindingResult bindingResult){
+    private ResponseEntity<CompletionMessage> checkServerCreation(
+            @Valid @RequestBody MinecraftServerCreationData data,
+            BindingResult bindingResult,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        // TODO dont let them send commands if they arent able to send commands
         HashMap<String, String> failReasons = new HashMap<>();
         bindingResult.getFieldErrors().forEach(fieldError -> failReasons.put(fieldError.getField(), fieldError.getDefaultMessage()));
         if(data.getPort() != null && !checkOpenServerPort(data.getPort())) failReasons.put("port", MC_SERVER_CREATE_PORT_CONFLICT);
@@ -137,7 +155,11 @@ public class MinecraftController {
 
     @ResponseBody
     @PostMapping("server/create")
-    private ResponseEntity<CompletionMessage> createServer(@Valid @RequestBody MinecraftServerCreationData data, BindingResult bindingResult){
+    private ResponseEntity<CompletionMessage> createServer(
+            @Valid @RequestBody MinecraftServerCreationData data,
+            BindingResult bindingResult
+    ){
+        // TODO dont let them create if they cant create
         ResponseEntity<CompletionMessage> validationCheck = checkServerCreation(data, bindingResult);
         if(!validationCheck.getStatusCode().equals(HttpStatus.OK)) return validationCheck;
         new Thread(() -> installServer(data), "Install Server").start();
@@ -206,18 +228,30 @@ public class MinecraftController {
     }
 
     @PostMapping("server/update")
-    private void updateServer(@RequestBody MinecraftServerUpdateCommand updateCommand){
+    private void updateServer(
+            @RequestBody MinecraftServerUpdateCommand updateCommand,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        // TODO dont let them update if they dont have edit configs
         servers.get(updateCommand.getServer()).updateServerVersion(updateCommand.getVersion(), serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
     }
 
     @ResponseBody
     @GetMapping("curseforge/project")
-    private CurseforgeMod getCurseforgeProject(@RequestBody CurseforgeProjectData data){
+    private CurseforgeMod getCurseforgeProject(
+            @RequestBody CurseforgeProjectData data,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        // TODO dont let them send if they dont have create perms
         return CurseforgeService.getCurseforgeMod(curseforgeToken, data.getProjectId());
     }
 
     @PostMapping("curseforge/project")
-    private void addCurseforgeProject(@RequestBody CurseforgeProjectData data){
+    private void addCurseforgeProject(
+            @RequestBody CurseforgeProjectData data,
+            @CookieValue(name = "user", required = false) String id
+    ){
+        // TODO dont let them send if they dont have create perms
         CurseforgeMod project = CurseforgeService.getCurseforgeMod(curseforgeToken, data.getProjectId());
         curseforgeProjectRepository.save(new CurseforgeProject(data.getProjectId(), project.getName()));
         updateServerVersions();
@@ -228,6 +262,7 @@ public class MinecraftController {
             @DestinationVariable String server,
             MinecraftWebsocketDataRequest message
     ) {
+        // TODO check user id if they are able to send it
         if(!servers.containsKey(server)) return;
         MinecraftServer mcServer = servers.get(server);
         switch(message.getAction()){

@@ -11,5 +11,6 @@ import java.util.HashMap;
 @NoArgsConstructor
 public class MinecraftWebsocketDataRequest {
     private String action;
+    private String userId;
     private HashMap<String, String> data;
 }

@@ -62,7 +62,11 @@ public class AuthenticationController {
     }
 
     @GetMapping("user/permissions/{id}")
-    private ResponseEntity<Map<String, String>> userPermissions(@PathVariable(required = false) String id){
+    private ResponseEntity<Map<String, String>> userPermissions(
+            @PathVariable(required = false) String id,
+            @CookieValue(name = "user", required = false) String userId
+    ){
+        // TODO dont send if the user doesnt have user management
         Optional<User> optionalUser = userRepository.findById(id);
         return optionalUser.map(
                 user -> ResponseEntity.ok(user.getPermissions()))
