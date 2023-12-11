@@ -157,10 +157,11 @@ public class MinecraftController {
     @PostMapping("server/create")
     private ResponseEntity<CompletionMessage> createServer(
             @Valid @RequestBody MinecraftServerCreationData data,
-            BindingResult bindingResult
+            BindingResult bindingResult,
+            @CookieValue(name = "user", required = false) String id
     ){
         // TODO dont let them create if they cant create
-        ResponseEntity<CompletionMessage> validationCheck = checkServerCreation(data, bindingResult);
+        ResponseEntity<CompletionMessage> validationCheck = checkServerCreation(data, bindingResult, id);
         if(!validationCheck.getStatusCode().equals(HttpStatus.OK)) return validationCheck;
         new Thread(() -> installServer(data), "Install Server").start();
         return ResponseEntity.ok(CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, "Starting install process. Listen on the websocket for completion"));
