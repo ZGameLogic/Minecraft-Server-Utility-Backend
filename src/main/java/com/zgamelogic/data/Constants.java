@@ -18,6 +18,8 @@ public abstract class Constants {
     public final static String MC_SERVER_CREATE_CONFLICT = "Unable to create server.";
     public final static String MC_SERVER_CREATE_PORT_RANGE = "port must be between 25500 and 29999";
 
+    public final static String MC_GENERAL_PERMISSION_CAT = "General Permissions";
+
     public final static String MC_CREATE_SERVER_PERMISSION = "C";
     public final static String MC_USER_MANAGEMENT_PERMISSION = "U";
 
