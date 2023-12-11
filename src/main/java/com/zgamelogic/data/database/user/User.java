@@ -9,6 +9,9 @@ import lombok.ToString;
 
 import java.util.*;
 
+import static com.zgamelogic.data.Constants.MC_ADMIN_PERMISSION;
+import static com.zgamelogic.data.Constants.MC_GENERAL_PERMISSION_CAT;
+
 @Data
 @Entity
 @ToString
@@ -54,6 +57,7 @@ public class User {
     }
 
     public boolean hasPermission(String obj, String permission){
+        if(permissions.containsKey(MC_GENERAL_PERMISSION_CAT) && permissions.get(MC_GENERAL_PERMISSION_CAT).contains(MC_ADMIN_PERMISSION)) return true;
         if(!permissions.containsKey(obj)) return false;
         return permissions.get(obj).contains(permission);
     }
