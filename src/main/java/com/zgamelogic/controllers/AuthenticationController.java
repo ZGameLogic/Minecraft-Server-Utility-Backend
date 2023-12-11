@@ -69,7 +69,7 @@ public class AuthenticationController {
     @GetMapping("user/permissions/{id}")
     private ResponseEntity<Map<String, String>> userPermissions(
             @PathVariable(required = false) String id,
-            @CookieValue(name = "user", required = false) String userId
+            @RequestHeader(name = "user", required=false) String userId
     ){
         if(!userRepository.userHasPermission(userId, MC_GENERAL_PERMISSION_CAT, MC_USER_MANAGEMENT_PERMISSION)) return ResponseEntity.status(401).build();
         Optional<User> optionalUser = userRepository.findById(id);
@@ -81,7 +81,7 @@ public class AuthenticationController {
     @SuppressWarnings("rawtypes")
     @PostMapping("user/permissions/{id}")
     private ResponseEntity updateUserPermissions(
-            @CookieValue(name = "user", required = false) String userId,
+            @RequestHeader(name = "user", required = false) String userId,
             @RequestHeader(name = "admin-code", required = false) String adminCode,
             @PathVariable String id,
             @RequestBody Permission permission

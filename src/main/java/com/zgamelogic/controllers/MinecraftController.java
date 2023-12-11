@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.zgamelogic.data.database.curseforge.CurseforgeProject;
 import com.zgamelogic.data.database.curseforge.CurseforgeProjectRepository;
+import com.zgamelogic.data.database.user.User;
 import com.zgamelogic.data.database.user.UserRepository;
 import com.zgamelogic.data.services.curseforge.CurseforgeMod;
 import com.zgamelogic.data.services.minecraft.*;
@@ -89,7 +90,7 @@ public class MinecraftController {
     @GetMapping("/server/log/{server}")
     private ResponseEntity<MinecraftServerLog> getServerLog(
             @PathVariable String server,
-            @CookieValue(name = "user", required = false) String id
+            @RequestHeader(name = "user", required=false) String id
     ){
         if(!userRepository.userHasPermission(id, server, MC_USE_CONSOLE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         if(!servers.containsKey(server)) return ResponseEntity.status(404).build();
@@ -98,7 +99,7 @@ public class MinecraftController {
 
     @ResponseBody
     @GetMapping("/server/versions")
-    public ResponseEntity<HashMap<String, LinkedList<String>>> getMinecraftServerVersions(@CookieValue(name = "user", required = false) String id){
+    public ResponseEntity<HashMap<String, LinkedList<String>>> getMinecraftServerVersions(@RequestHeader(name = "user", required=false) String id){
         if(!userRepository.userHasPermission(id, MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         HashMap<String, LinkedList<String>> data = new HashMap<>();
         serverVersions.forEach((key, value) -> data.put(key, new LinkedList<>(value.keySet())));
@@ -109,7 +110,7 @@ public class MinecraftController {
     @PostMapping("server/command")
     private ResponseEntity sendCommand(
             @RequestBody MinecraftServerStatusCommand command,
-            @CookieValue(name = "user", required = false) String id
+            @RequestHeader(name = "user", required=false) String id
     ){
         if(!userRepository.userHasPermission(id, command.server(), MC_ISSUE_COMMANDS_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         if(!servers.containsKey(command.server())) ResponseEntity.status(404).build();
@@ -132,7 +133,7 @@ public class MinecraftController {
     private ResponseEntity<CompletionMessage> checkServerCreation(
             @Valid @RequestBody MinecraftServerCreationData data,
             BindingResult bindingResult,
-            @CookieValue(name = "user", required = false) String id
+            @RequestHeader(name = "user", required=false) String id
     ){
         if(!userRepository.userHasPermission(id, MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         HashMap<String, String> failReasons = new HashMap<>();
@@ -150,12 +151,15 @@ public class MinecraftController {
     private ResponseEntity<CompletionMessage> createServer(
             @Valid @RequestBody MinecraftServerCreationData data,
             BindingResult bindingResult,
-            @CookieValue(name = "user", required = false) String id
+            @RequestHeader(name = "user", required=false) String id
     ){
         if(!userRepository.userHasPermission(id, MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         ResponseEntity<CompletionMessage> validationCheck = checkServerCreation(data, bindingResult, id);
         if(!validationCheck.getStatusCode().equals(HttpStatus.OK)) return validationCheck;
         new Thread(() -> installServer(data), "Install Server").start();
+        User user = userRepository.getReferenceById(id);
+        user.addPermission(data.getName(), MC_USE_CONSOLE_SERVER_PERMISSION + MC_ISSUE_COMMANDS_SERVER_PERMISSION + MC_EDIT_SERVER_PROPERTIES_PERMISSION);
+        userRepository.save(user);
         return ResponseEntity.ok(CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, "Starting install process. Listen on the websocket for completion"));
     }
 
@@ -224,7 +228,7 @@ public class MinecraftController {
     @PostMapping("server/update")
     private ResponseEntity updateServer(
             @RequestBody MinecraftServerUpdateCommand updateCommand,
-            @CookieValue(name = "user", required = false) String id
+            @RequestHeader(name = "user", required=false) String id
     ){
         if(!userRepository.userHasPermission(id, updateCommand.getServer(), MC_ISSUE_COMMANDS_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         servers.get(updateCommand.getServer()).updateServerVersion(updateCommand.getVersion(), serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
@@ -235,7 +239,7 @@ public class MinecraftController {
     @GetMapping("curseforge/project")
     private ResponseEntity<CurseforgeMod> getCurseforgeProject(
             @RequestBody CurseforgeProjectData data,
-            @CookieValue(name = "user", required = false) String id
+            @RequestHeader(name = "user", required=false) String id
     ){
         if(!userRepository.userHasPermission(id, MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         return ResponseEntity.ok(CurseforgeService.getCurseforgeMod(curseforgeToken, data.getProjectId()));
@@ -245,7 +249,7 @@ public class MinecraftController {
     @PostMapping("curseforge/project")
     private ResponseEntity addCurseforgeProject(
             @RequestBody CurseforgeProjectData data,
-            @CookieValue(name = "user", required = false) String id
+            @RequestHeader(name = "user", required=false) String id
     ){
         if(!userRepository.userHasPermission(id, MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
         CurseforgeMod project = CurseforgeService.getCurseforgeMod(curseforgeToken, data.getProjectId());
