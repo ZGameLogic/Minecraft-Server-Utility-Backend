@@ -22,6 +22,7 @@ public abstract class Constants {
 
     public final static String MC_CREATE_SERVER_PERMISSION = "C";
     public final static String MC_USER_MANAGEMENT_PERMISSION = "U";
+    public final static String MC_ADMIN_PERMISSION = "A";
 
     public final static String MC_USE_CONSOLE_SERVER_PERMISSION = "c";
     public final static String MC_EDIT_SERVER_PROPERTIES_PERMISSION = "e";
