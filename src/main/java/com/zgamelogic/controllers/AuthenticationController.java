@@ -39,20 +39,28 @@ public class AuthenticationController {
     @PostMapping("/auth/login")
     private ResponseEntity<MSUUser> login(
             @RequestParam(value = "code", required = false) String code,
-            @RequestParam(value = "token", required = false) String refreshToken
+            @RequestParam(value = "id", required = false) String id
     ){
-        if(code == null && refreshToken == null) return ResponseEntity.badRequest().build();
+        if(code == null && id == null) return ResponseEntity.badRequest().build();
         try {
-            DiscordToken token = code != null ?
-                    postForToken(code, discordClientId, discordClientSecret, discordRedirectUrl) :
-                    refreshToken(refreshToken, discordClientId, discordClientSecret);
+            DiscordToken token;
+            if(code != null){
+                token = postForToken(code, discordClientId, discordClientSecret, discordRedirectUrl);
+            } else {
+                Optional<User> user = userRepository.findById(id);
+                if(user.isPresent()){
+                    token = refreshToken(user.get().getRefreshToken(), discordClientId, discordClientSecret);
+                } else {
+                    return ResponseEntity.status(404).build();
+                }
+            }
             DiscordUser user = getUserFromToken(token.getAccess_token());
             if(userRepository.existsById(user.getId())){
                 User databaseUser = userRepository.getReferenceById(user.getId());
-                databaseUser.updateUser(user);
+                databaseUser.updateUser(user, token);
                 userRepository.save(databaseUser);
             } else {
-                User databaseUser = new User(user);
+                User databaseUser = new User(user, token);
                 if(userRepository.count() == 0) {
                     databaseUser.addPermission(MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION);
                     databaseUser.addPermission(MC_GENERAL_PERMISSION_CAT, MC_USER_MANAGEMENT_PERMISSION);

@@ -1,6 +1,7 @@
 package com.zgamelogic.data.database.user;
 
 import com.zgamelogic.data.services.auth.Permission;
+import com.zgamelogic.data.services.discord.DiscordToken;
 import com.zgamelogic.data.services.discord.DiscordUser;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -24,6 +25,7 @@ public class User {
     private String username;
     private String email;
     private Date lastLoggedIn;
+    private String refreshToken;
 
     @ElementCollection
     @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
@@ -31,17 +33,19 @@ public class User {
     @Column(name = "permissions")
     private Map<String, String> permissions = new HashMap<>();
 
-    public User(DiscordUser discordUser){
+    public User(DiscordUser discordUser, DiscordToken token){
         id = discordUser.getId();
         username = discordUser.getUsername();
         email = discordUser.getEmail();
         lastLoggedIn = new Date();
         permissions = new HashMap<>();
+        refreshToken = token.getRefresh_token();
     }
 
-    public void updateUser(DiscordUser discordUser){
+    public void updateUser(DiscordUser discordUser, DiscordToken token){
         username = discordUser.getUsername();
         email = discordUser.getEmail();
+        refreshToken = token.getRefresh_token();
     }
 
     public void addPermission(String obj, String perm){
