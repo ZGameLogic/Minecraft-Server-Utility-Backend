@@ -12,6 +12,8 @@ import org.springframework.util.FileSystemUtils;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Scanner;
@@ -168,8 +170,22 @@ public class MinecraftServer {
         }
     }
 
+    private void backupWorld(){
+        File backupDir = new File(new File(filePath).getParentFile().getParentFile() + "/world backups/" + name);
+        backupDir.mkdirs();
+        String worldName = serverProperties.get("level-name");
+        SimpleDateFormat format = new SimpleDateFormat("yy-MM-dd");
+        File backupDest = new File(backupDir + "/" + format.format(new Date()) + ".zip");
+        int i = 0;
+        while(backupDest.exists()){backupDest = new File(backupDir + "/" + format.format(new Date()) + "-" + i + ".zip");}
+        System.out.println(backupDest);
+        zipFile(filePath + "/" + worldName, backupDest.getPath());
+    }
+
     private void updateATM9Server(String download, String version){
         new Thread(() -> {
+            updateMessage("Backing up world", 0.0);
+            backupWorld();
             File serverDir = new File(filePath);
             File tempDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-temp");
             File backDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-backup");
@@ -243,6 +259,8 @@ public class MinecraftServer {
             File loggerFile = new File(filePath + "\\msu_update.log");
             if(loggerFile.exists()) loggerFile.delete();
             SimpleLogger l = new SimpleLogger(loggerFile);
+            l.info("Backing up world");
+            backupWorld();
             File serverDir = new File(filePath);
             File serverJar = new File(filePath + "/server.jar");
             l.info("Deleting old jar");
