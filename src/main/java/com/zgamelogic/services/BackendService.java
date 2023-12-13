@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
@@ -121,6 +122,23 @@ public abstract class BackendService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Unzips a file
+     * @param sourceFilePath File path to zip
+     * @param zipFilePath File path to zip to
+     */
+    public static void zipFile(String sourceFilePath, String zipFilePath) {
+        File sourceFile = new File(sourceFilePath);
+        try (FileOutputStream fos = new FileOutputStream(zipFilePath);
+             ZipOutputStream zipOut = new ZipOutputStream(fos);
+             FileInputStream fis = new FileInputStream(sourceFile)) {
+            ZipEntry zipEntry = new ZipEntry(sourceFile.getName());
+            zipOut.putNextEntry(zipEntry);
+            StreamUtils.copy(fis, zipOut);
+            zipOut.closeEntry();
+        } catch (IOException ignored){}
     }
 
     /**
