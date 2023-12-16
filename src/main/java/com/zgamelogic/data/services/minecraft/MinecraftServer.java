@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.zgamelogic.data.minecraft.MinecraftServerSocketAction;
 import com.zgamelogic.data.minecraft.SimpleLogger;
+import com.zgamelogic.services.DiscordService;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -251,6 +252,7 @@ public class MinecraftServer {
             saveServerConfig();
             status = MC_SERVER_OFFLINE;
             if(getServerConfig().isAutoStart()) startServer();
+            DiscordService.updateMessage("Updated ATM9 to " + version.split("-")[2]);
         }, "Update").start();
     }
 

@@ -52,4 +52,15 @@ public abstract class DiscordService {
         ResponseEntity<DiscordUser> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), DiscordUser.class);
         return response.getBody();
     }
+
+    public static void updateMessage(String message){
+        String url = "https://zgamelogic.com:2002/message";
+        HttpHeaders headers = new HttpHeaders();
+        RestTemplate restTemplate = new RestTemplate();
+        MultiValueMap<String, Object> requestBody = new LinkedMultiValueMap<>();
+        requestBody.add("guildId", 738850921706029168L);
+        requestBody.add("message", message);
+        requestBody.add("mentionIds", new String[]{"935712272981037086"});
+        restTemplate.exchange(url, HttpMethod.POST,  new HttpEntity<>(requestBody, headers), String.class);
+    }
 }
