@@ -77,13 +77,16 @@ public class MinecraftController {
     }
 
     @ResponseBody
-    @GetMapping({"/servers", "/servers/{server}"})
-    private Collection<MinecraftServer> getServers(
-            @PathVariable(required = false) String server
-    ){
-        if(server == null) return servers.values();
-        if(!servers.containsKey(server)) return List.of();
-        return List.of(servers.get(server));
+    @GetMapping("/servers")
+    private Collection<MinecraftServer> getServers(){
+        return servers.values();
+    }
+
+    @ResponseBody
+    @GetMapping("/servers/{server}")
+    private ResponseEntity<MinecraftServer> getServer(@PathVariable String server){
+        if(!servers.containsKey(server)) return ResponseEntity.status(404).build();
+        return ResponseEntity.ok(servers.get(server));
     }
 
     @ResponseBody
