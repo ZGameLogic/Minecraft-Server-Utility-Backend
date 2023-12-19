@@ -13,6 +13,8 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -75,21 +77,17 @@ public class AuthenticationController {
         }
     }
 
-    @GetMapping("user/permissions/{id}")
-    private ResponseEntity<Map<String, String>> userPermissions(
-            @PathVariable(required = false) String id,
+    @GetMapping("/user/permissions")
+    private ResponseEntity<List<User>> userPermissions(
             @RequestHeader(name = "user", required=false) String userId
     ){
         if(!userRepository.userHasPermission(userId, MC_GENERAL_PERMISSION_CAT, MC_USER_MANAGEMENT_PERMISSION)) return ResponseEntity.status(401).build();
-        Optional<User> optionalUser = userRepository.findById(id);
-        return optionalUser.map(
-                user -> ResponseEntity.ok(user.getPermissions()))
-                .orElseGet(() -> ResponseEntity.badRequest().build());
+        return ResponseEntity.ok(userRepository.findAll());
     }
 
     @SuppressWarnings("rawtypes")
-    @PostMapping("user/permissions/{id}")
-    private ResponseEntity updateUserPermissions(
+    @PostMapping("/user/permissions/add/{id}")
+    private ResponseEntity addUserPermissions(
             @RequestHeader(name = "user", required = false) String userId,
             @RequestHeader(name = "admin-code", required = false) String adminCode,
             @PathVariable String id,
@@ -100,7 +98,24 @@ public class AuthenticationController {
         if(adminCode != null && !adminCode.equals(this.adminCode)) return ResponseEntity.status(401).build();
         if(!userRepository.existsById(id)) return ResponseEntity.status(404).build();
         User user = userRepository.getReferenceById(id);
-        user.addPermission(permission.getServer(), permission.getPermission());
+        user.addPermission(permission);
+        userRepository.save(user);
+        return ResponseEntity.status(200).build();
+    }
+
+    @PostMapping("/user/permissions/remove/{id}")
+    private ResponseEntity removeUserPermissions(
+            @RequestHeader(name = "user", required = false) String userId,
+            @RequestHeader(name = "admin-code", required = false) String adminCode,
+            @PathVariable String id,
+            @RequestBody Permission permission
+    ){
+        if(userId == null && adminCode == null) return ResponseEntity.status(401).build();
+        if(userId != null && !userRepository.userHasPermission(userId, MC_GENERAL_PERMISSION_CAT, MC_USER_MANAGEMENT_PERMISSION)) return ResponseEntity.status(401).build();
+        if(adminCode != null && !adminCode.equals(this.adminCode)) return ResponseEntity.status(401).build();
+        if(!userRepository.existsById(id)) return ResponseEntity.status(404).build();
+        User user = userRepository.getReferenceById(id);
+        user.removePermission(permission);
         userRepository.save(user);
         return ResponseEntity.status(200).build();
     }

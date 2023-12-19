@@ -60,6 +60,16 @@ public class User {
         addPermission(permission.getServer(), permission.getPermission());
     }
 
+    public void removePermission(String obj, String perm){
+        if(!permissions.containsKey(obj)) return;
+        String newPerms = permissions.get(obj).replace(perm, "");
+        permissions.put(obj, newPerms);
+    }
+
+    public void removePermission(Permission permission){
+        removePermission(permission.getServer(), permission.getPermission());
+    }
+
     public boolean hasPermission(String obj, String permission){
         if(permissions.containsKey(MC_GENERAL_PERMISSION_CAT) && permissions.get(MC_GENERAL_PERMISSION_CAT).contains(MC_ADMIN_PERMISSION)) return true;
         if(!permissions.containsKey(obj)) return false;
