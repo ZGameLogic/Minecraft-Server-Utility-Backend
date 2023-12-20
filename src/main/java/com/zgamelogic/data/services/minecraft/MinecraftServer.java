@@ -323,6 +323,7 @@ public class MinecraftServer {
             online.clear();
         }, name + " watch").start();
         new Thread(() -> { // Thread for watching server status.
+            statusAction.action(name, status);
             String currentStatus = status;
             while(true){
                 sleep(1000);

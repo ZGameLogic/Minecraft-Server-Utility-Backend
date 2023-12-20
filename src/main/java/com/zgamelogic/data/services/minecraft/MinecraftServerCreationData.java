@@ -1,9 +1,6 @@
 package com.zgamelogic.data.services.minecraft;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -21,7 +18,8 @@ public class MinecraftServerCreationData {
     private String version;
     @NotNull(message = "category is required")
     private String category;
-    @NotNull(message = "startCommand is required")
+    @NotNull(message = "start command is required")
+    @NotEmpty(message = "start command cannot be empty")
     private String startCommand;
 
     @NotNull(message = "port is required")
@@ -29,6 +27,7 @@ public class MinecraftServerCreationData {
     @Max(value = 29999, message = MC_SERVER_CREATE_PORT_RANGE)
     private Integer port;
     @NotNull(message = "name is required")
+    @NotEmpty(message = "name cannot be empty")
     @Pattern(regexp = MC_NAME_REGEX, message = "name can only contain alphanumeric values")
     private String name;
 }
