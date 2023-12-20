@@ -54,7 +54,7 @@ public abstract class DiscordService {
     }
 
     public static void updateMessage(String message){
-        String url = "https://zgamelogic.com:2002/api/message";
+        String url = "https://zgamelogic.com:2002/message";
         HttpHeaders headers = new HttpHeaders();
         RestTemplate restTemplate = new RestTemplate();
         MultiValueMap<String, Object> requestBody = new LinkedMultiValueMap<>();
