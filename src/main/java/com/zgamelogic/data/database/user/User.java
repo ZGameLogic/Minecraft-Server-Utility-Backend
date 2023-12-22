@@ -1,5 +1,6 @@
 package com.zgamelogic.data.database.user;
 
+import com.zgamelogic.data.services.auth.Notification;
 import com.zgamelogic.data.services.auth.Permission;
 import com.zgamelogic.data.services.discord.DiscordToken;
 import com.zgamelogic.data.services.discord.DiscordUser;
@@ -9,9 +10,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.util.*;
-
-import static com.zgamelogic.data.Constants.MC_ADMIN_PERMISSION;
-import static com.zgamelogic.data.Constants.MC_GENERAL_PERMISSION_CAT;
 
 @Data
 @Entity
@@ -32,6 +30,17 @@ public class User {
     @MapKeyColumn(name = "object_name")
     @Column(name = "permissions")
     private Map<String, String> permissions = new HashMap<>();
+
+    @ElementCollection
+    @CollectionTable(name = "user_notifications", joinColumns = @JoinColumn(name = "user_id"))
+    @MapKeyColumn(name = "server_name")
+    @Column(name = "notifications")
+    private Map<String, String> notifications = new HashMap<>();
+
+    @ElementCollection
+    @CollectionTable(name = "user_device_ids", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "device")
+    private List<String> deviceIds;
 
     public User(DiscordUser discordUser, DiscordToken token){
         id = discordUser.getId();
@@ -70,9 +79,25 @@ public class User {
         removePermission(permission.getServer(), permission.getPermission());
     }
 
-    public boolean hasPermission(String obj, String permission){
-        if(permissions.containsKey(MC_GENERAL_PERMISSION_CAT) && permissions.get(MC_GENERAL_PERMISSION_CAT).contains(MC_ADMIN_PERMISSION)) return true;
-        if(!permissions.containsKey(obj)) return false;
-        return permissions.get(obj).contains(permission);
+    public void addNotification(String obj, String perm){
+        if(notifications.containsKey(obj)){
+            notifications.put(obj, notifications.get(obj) + perm);
+        } else {
+            notifications.put(obj, perm);
+        }
+    }
+
+    public void addNotification(Notification notification){
+        addNotification(notification.getServer(), notification.getNotification());
+    }
+
+    public void removeNotification(String obj, String perm){
+        if(!notifications.containsKey(obj)) return;
+        String newPerms = notifications.get(obj).replace(perm, "");
+        notifications.put(obj, newPerms);
+    }
+
+    public void removeNotification(Notification notification){
+        removeNotification(notification.getServer(), notification.getNotification());
     }
 }
