@@ -1,9 +1,9 @@
 package com.zgamelogic.data.database.user;
 
-import com.zgamelogic.data.services.auth.Notification;
 import com.zgamelogic.data.services.auth.Permission;
 import com.zgamelogic.data.services.discord.DiscordToken;
 import com.zgamelogic.data.services.discord.DiscordUser;
+import com.zgamelogic.data.services.auth.NotificationMessage.Toggle;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -35,7 +35,7 @@ public class User {
     @CollectionTable(name = "user_notifications", joinColumns = @JoinColumn(name = "user_id"))
     @MapKeyColumn(name = "server_name")
     @Column(name = "notifications")
-    private Map<String, String> notifications = new HashMap<>();
+    private Map<String, Notification> notifications = new HashMap<>();
 
     @ElementCollection
     @CollectionTable(name = "user_device_ids", joinColumns = @JoinColumn(name = "user_id"))
@@ -79,25 +79,15 @@ public class User {
         removePermission(permission.getServer(), permission.getPermission());
     }
 
-    public void addNotification(String obj, String perm){
-        if(notifications.containsKey(obj)){
-            notifications.put(obj, notifications.get(obj) + perm);
+    public void toggleNotification(String server, Toggle notification){
+        if(notifications.containsKey(server)){
+            Notification n = notifications.get(server);
+            n.toggle(notification);
+            notifications.put(server, n);
         } else {
-            notifications.put(obj, perm);
+            Notification n = new Notification();
+            n.toggle(notification);
+            notifications.put(server, n);
         }
-    }
-
-    public void addNotification(Notification notification){
-        addNotification(notification.getServer(), notification.getNotification());
-    }
-
-    public void removeNotification(String obj, String perm){
-        if(!notifications.containsKey(obj)) return;
-        String newPerms = notifications.get(obj).replace(perm, "");
-        notifications.put(obj, newPerms);
-    }
-
-    public void removeNotification(Notification notification){
-        removeNotification(notification.getServer(), notification.getNotification());
     }
 }

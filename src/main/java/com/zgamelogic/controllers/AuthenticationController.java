@@ -2,7 +2,7 @@ package com.zgamelogic.controllers;
 
 import com.zgamelogic.data.database.user.User;
 import com.zgamelogic.data.database.user.UserRepository;
-import com.zgamelogic.data.services.auth.Notification;
+import com.zgamelogic.data.services.auth.NotificationMessage;
 import com.zgamelogic.data.services.auth.Permission;
 import com.zgamelogic.data.services.discord.DiscordToken;
 import com.zgamelogic.data.services.discord.DiscordUser;
@@ -71,7 +71,7 @@ public class AuthenticationController {
                 userRepository.save(databaseUser);
             }
             Map<String, String> permissions = userRepository.getReferenceById(user.getId()).getPermissions();
-            Map<String, String> notifications = userRepository.getReferenceById(user.getId()).getNotifications();
+            Map<String, com.zgamelogic.data.database.user.Notification> notifications = userRepository.getReferenceById(user.getId()).getNotifications();
             return ResponseEntity.ok(new MSUUser(user, token, permissions, notifications));
         } catch (Exception e){
             return ResponseEntity.badRequest().build();
@@ -87,29 +87,15 @@ public class AuthenticationController {
     }
 
     @SuppressWarnings("rawtypes")
-    @PostMapping("/user/notifications/add")
-    private ResponseEntity addUserNotifications(
-            @RequestHeader(name = "user", required = false) String userId,
-            @RequestBody Notification notification
+    @PostMapping("/user/notifications/toggle")
+    private ResponseEntity toggleUserNotification(
+            @RequestHeader(name = "user") String userId,
+            @RequestBody NotificationMessage notificationMessage
     ){
         if(userId == null) return ResponseEntity.status(401).build();
         if(!userRepository.existsById(userId)) return ResponseEntity.status(404).build();
         User user = userRepository.getReferenceById(userId);
-        user.addNotification(notification);
-        userRepository.save(user);
-        return ResponseEntity.status(200).build();
-    }
-
-    @SuppressWarnings("rawtypes")
-    @PostMapping("/user/notifications/remove")
-    private ResponseEntity removeUserNotifications(
-            @RequestHeader(name = "user", required = false) String userId,
-            @RequestBody Notification notification
-    ){
-        if(userId == null) return ResponseEntity.status(401).build();
-        if(!userRepository.existsById(userId)) return ResponseEntity.status(404).build();
-        User user = userRepository.getReferenceById(userId);
-        user.removeNotification(notification);
+        user.toggleNotification(notificationMessage.getServer(), notificationMessage.getNotification());
         userRepository.save(user);
         return ResponseEntity.status(200).build();
     }
