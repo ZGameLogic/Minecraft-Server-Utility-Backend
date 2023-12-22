@@ -135,4 +135,30 @@ public class AuthenticationController {
         userRepository.save(user);
         return ResponseEntity.status(200).build();
     }
+
+    @SuppressWarnings("rawtypes")
+    @PostMapping("user/devices/register/{device}")
+    private ResponseEntity registerDevice(
+            @RequestHeader(name = "user") String userId,
+            @PathVariable String device
+    ){
+        if(!userRepository.existsById(userId)) return ResponseEntity.status(404).build();
+        User user = userRepository.getReferenceById(userId);
+        user.registerDevice(device);
+        userRepository.save(user);
+        return ResponseEntity.status(200).build();
+    }
+
+    @SuppressWarnings("rawtypes")
+    @PostMapping("user/devices/unregister/{device}")
+    private ResponseEntity unregisterDevice(
+            @RequestHeader(name = "user") String userId,
+            @PathVariable String device
+    ){
+        if(!userRepository.existsById(userId)) return ResponseEntity.status(404).build();
+        User user = userRepository.getReferenceById(userId);
+        user.unregisterDevice(device);
+        userRepository.save(user);
+        return ResponseEntity.status(200).build();
+    }
 }

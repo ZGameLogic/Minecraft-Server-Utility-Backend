@@ -40,7 +40,7 @@ public class User {
     @ElementCollection
     @CollectionTable(name = "user_device_ids", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "device")
-    private List<String> deviceIds;
+    private Set<String> deviceIds;
 
     public User(DiscordUser discordUser, DiscordToken token){
         id = discordUser.getId();
@@ -77,6 +77,14 @@ public class User {
 
     public void removePermission(Permission permission){
         removePermission(permission.getServer(), permission.getPermission());
+    }
+
+    public void registerDevice(String id){
+        deviceIds.add(id);
+    }
+
+    public void unregisterDevice(String id){
+        deviceIds.remove(id);
     }
 
     public void toggleNotification(String server, Toggle notification){
