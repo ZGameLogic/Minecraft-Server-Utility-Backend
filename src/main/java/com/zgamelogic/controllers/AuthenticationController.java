@@ -1,5 +1,6 @@
 package com.zgamelogic.controllers;
 
+import com.zgamelogic.data.database.user.NotificationConfiguration;
 import com.zgamelogic.data.database.user.User;
 import com.zgamelogic.data.database.user.UserRepository;
 import com.zgamelogic.data.services.auth.NotificationMessage;
@@ -71,7 +72,7 @@ public class AuthenticationController {
                 userRepository.save(databaseUser);
             }
             Map<String, String> permissions = userRepository.getReferenceById(user.getId()).getPermissions();
-            Map<String, com.zgamelogic.data.database.user.Notification> notifications = userRepository.getReferenceById(user.getId()).getNotifications();
+            Map<String, NotificationConfiguration> notifications = userRepository.getReferenceById(user.getId()).getNotifications();
             return ResponseEntity.ok(new MSUUser(user, token, permissions, notifications));
         } catch (Exception e){
             return ResponseEntity.badRequest().build();

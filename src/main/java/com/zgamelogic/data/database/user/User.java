@@ -35,7 +35,7 @@ public class User {
     @CollectionTable(name = "user_notifications", joinColumns = @JoinColumn(name = "user_id"))
     @MapKeyColumn(name = "server_name")
     @Column(name = "notifications")
-    private Map<String, Notification> notifications = new HashMap<>();
+    private Map<String, NotificationConfiguration> notifications = new HashMap<>();
 
     @ElementCollection
     @CollectionTable(name = "user_device_ids", joinColumns = @JoinColumn(name = "user_id"))
@@ -89,11 +89,11 @@ public class User {
 
     public void toggleNotification(String server, Toggle notification){
         if(notifications.containsKey(server)){
-            Notification n = notifications.get(server);
+            NotificationConfiguration n = notifications.get(server);
             n.toggle(notification);
             notifications.put(server, n);
         } else {
-            Notification n = new Notification();
+            NotificationConfiguration n = new NotificationConfiguration();
             n.toggle(notification);
             notifications.put(server, n);
         }

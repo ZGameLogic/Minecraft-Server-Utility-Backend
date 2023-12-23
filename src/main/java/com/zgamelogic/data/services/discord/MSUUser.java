@@ -1,6 +1,6 @@
 package com.zgamelogic.data.services.discord;
 
-import com.zgamelogic.data.database.user.Notification;
+import com.zgamelogic.data.database.user.NotificationConfiguration;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,13 +14,13 @@ public class MSUUser {
     private String id;
     private String refresh_token;
     private Map<String, String> permissions;
-    private Map<String, Notification> notifications;
+    private Map<String, NotificationConfiguration> notifications;
 
     public MSUUser(
             DiscordUser discordUser,
             DiscordToken discordToken,
             Map<String, String> permissions,
-            Map<String, Notification> notifications
+            Map<String, NotificationConfiguration> notifications
     ){
         username = discordUser.getUsername();
         avatar = discordUser.getAvatar();

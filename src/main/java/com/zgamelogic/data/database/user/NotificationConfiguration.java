@@ -6,7 +6,7 @@ import com.zgamelogic.data.services.auth.NotificationMessage.Toggle;
 
 @Embeddable
 @Data
-public class Notification {
+public class NotificationConfiguration {
     private boolean player; // join leave
     private boolean chat; // chat notifications
     private boolean live; // live activity
