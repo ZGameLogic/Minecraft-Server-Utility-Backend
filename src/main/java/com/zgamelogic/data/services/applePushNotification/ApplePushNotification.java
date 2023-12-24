@@ -7,7 +7,20 @@ import lombok.Data;
 @Data
 @JsonSerialize(using = ApplePushNotificationSerializer.class)
 public class ApplePushNotification {
-    private String title;
-    private String subtitle;
-    private String body;
+    private final String title;
+    private final String subtitle;
+    private final String body;
+
+    public ApplePushNotification(String title){
+        this(title, null);
+    }
+
+    public ApplePushNotification(String title, String subtitle){
+        this(title, subtitle, null);
+    }
+    public ApplePushNotification(String title, String subtitle, String body){
+        this.title = title;
+        this.subtitle = subtitle;
+        this.body = body;
+    }
 }

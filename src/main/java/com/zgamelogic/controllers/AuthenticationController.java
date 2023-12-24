@@ -8,6 +8,7 @@ import com.zgamelogic.data.services.auth.Permission;
 import com.zgamelogic.data.services.discord.DiscordToken;
 import com.zgamelogic.data.services.discord.DiscordUser;
 import com.zgamelogic.data.services.discord.MSUUser;
+import com.zgamelogic.services.NotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +30,7 @@ public class AuthenticationController {
     @Value("${client.id}") private String discordClientId;
     @Value("${client.secret}") private String discordClientSecret;
     @Value("${redirect.url}") private String discordRedirectUrl;
+    @Value("${APN}") private String apn;
 
     @Value("${admin.code}") private String adminCode;
 
@@ -161,5 +163,10 @@ public class AuthenticationController {
         user.unregisterDevice(device);
         userRepository.save(user);
         return ResponseEntity.status(200).build();
+    }
+
+    @GetMapping("test")
+    private void test(){
+        NotificationService.sendNotification("22a57180b3a7e19a3ee02d5e811359ee36fdf3ae597aaf0c90c485624e560968", apn);
     }
 }

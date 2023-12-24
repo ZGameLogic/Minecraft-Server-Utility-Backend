@@ -13,26 +13,20 @@ public class ApplePushNotificationSerializer extends JsonSerializer<ApplePushNot
             throws IOException {
 
         jsonGenerator.writeStartObject();
-        jsonGenerator.writeStringField("Simulator Target Bundle", notification.getSimulatorTargetBundle());
+        jsonGenerator.writeObjectFieldStart("aps");
+        jsonGenerator.writeObjectFieldStart("alert");
+        jsonGenerator.writeStringField("title", notification.getTitle());
 
-        if (notification.getAps() != null && notification.getAps().getAlert() != null) {
-            jsonGenerator.writeObjectFieldStart("aps");
-            jsonGenerator.writeObjectFieldStart("alert");
-
-            jsonGenerator.writeStringField("title", notification.getAps().getAlert().getTitle());
-
-            if (notification.getAps().getAlert().getSubtitle() != null) {
-                jsonGenerator.writeStringField("subtitle", notification.getAps().getAlert().getSubtitle());
-            }
-
-            if (notification.getAps().getAlert().getBody() != null) {
-                jsonGenerator.writeStringField("body", notification.getAps().getAlert().getBody());
-            }
-
-            jsonGenerator.writeEndObject(); // alert
-            jsonGenerator.writeEndObject(); // aps
+        if (notification.getSubtitle() != null) {
+            jsonGenerator.writeStringField("subtitle", notification.getSubtitle());
         }
 
+        if (notification.getBody() != null) {
+            jsonGenerator.writeStringField("body", notification.getBody());
+        }
+
+        jsonGenerator.writeEndObject(); // alert
+        jsonGenerator.writeEndObject(); // aps
         jsonGenerator.writeEndObject();
     }
 }
