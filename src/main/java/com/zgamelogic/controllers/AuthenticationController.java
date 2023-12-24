@@ -1,14 +1,11 @@
 package com.zgamelogic.controllers;
 
-import com.zgamelogic.data.database.user.NotificationConfiguration;
 import com.zgamelogic.data.database.user.User;
 import com.zgamelogic.data.database.user.UserRepository;
-import com.zgamelogic.data.services.auth.NotificationMessage;
 import com.zgamelogic.data.services.auth.Permission;
 import com.zgamelogic.data.services.discord.DiscordToken;
 import com.zgamelogic.data.services.discord.DiscordUser;
 import com.zgamelogic.data.services.discord.MSUUser;
-import com.zgamelogic.services.NotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +13,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,7 +28,6 @@ public class AuthenticationController {
     @Value("${client.id}") private String discordClientId;
     @Value("${client.secret}") private String discordClientSecret;
     @Value("${redirect.url}") private String discordRedirectUrl;
-    @Value("${APN}") private String apn;
 
     @Value("${admin.code}") private String adminCode;
 
@@ -74,8 +71,7 @@ public class AuthenticationController {
                 userRepository.save(databaseUser);
             }
             Map<String, String> permissions = userRepository.getReferenceById(user.getId()).getPermissions();
-            Map<String, NotificationConfiguration> notifications = userRepository.getReferenceById(user.getId()).getNotifications();
-            return ResponseEntity.ok(new MSUUser(user, token, permissions, notifications));
+            return ResponseEntity.ok(new MSUUser(user, token, permissions));
         } catch (Exception e){
             return ResponseEntity.badRequest().build();
         }
@@ -87,20 +83,6 @@ public class AuthenticationController {
     ){
         if(!userRepository.userHasPermission(userId, MC_GENERAL_PERMISSION_CAT, MC_USER_MANAGEMENT_PERMISSION)) return ResponseEntity.status(401).build();
         return ResponseEntity.ok(userRepository.findAll());
-    }
-
-    @SuppressWarnings("rawtypes")
-    @PostMapping("/user/notifications/toggle")
-    private ResponseEntity toggleUserNotification(
-            @RequestHeader(name = "user") String userId,
-            @RequestBody NotificationMessage notificationMessage
-    ){
-        if(userId == null) return ResponseEntity.status(401).build();
-        if(!userRepository.existsById(userId)) return ResponseEntity.status(404).build();
-        User user = userRepository.getReferenceById(userId);
-        user.toggleNotification(notificationMessage.getServer(), notificationMessage.getNotification());
-        userRepository.save(user);
-        return ResponseEntity.status(200).build();
     }
 
     @SuppressWarnings("rawtypes")
@@ -121,7 +103,6 @@ public class AuthenticationController {
         return ResponseEntity.status(200).build();
     }
 
-    @SuppressWarnings("rawtypes")
     @PostMapping("/user/permissions/remove/{id}")
     private ResponseEntity removeUserPermissions(
             @RequestHeader(name = "user", required = false) String userId,
@@ -137,36 +118,5 @@ public class AuthenticationController {
         user.removePermission(permission);
         userRepository.save(user);
         return ResponseEntity.status(200).build();
-    }
-
-    @SuppressWarnings("rawtypes")
-    @PostMapping("user/devices/register/{device}")
-    private ResponseEntity registerDevice(
-            @RequestHeader(name = "user") String userId,
-            @PathVariable String device
-    ){
-        if(!userRepository.existsById(userId)) return ResponseEntity.status(404).build();
-        User user = userRepository.getReferenceById(userId);
-        user.registerDevice(device);
-        userRepository.save(user);
-        return ResponseEntity.status(200).build();
-    }
-
-    @SuppressWarnings("rawtypes")
-    @PostMapping("user/devices/unregister/{device}")
-    private ResponseEntity unregisterDevice(
-            @RequestHeader(name = "user") String userId,
-            @PathVariable String device
-    ){
-        if(!userRepository.existsById(userId)) return ResponseEntity.status(404).build();
-        User user = userRepository.getReferenceById(userId);
-        user.unregisterDevice(device);
-        userRepository.save(user);
-        return ResponseEntity.status(200).build();
-    }
-
-    @GetMapping("test")
-    private void test(@RequestHeader("jwt") String jwt){
-        NotificationService.sendNotification("22a57180b3a7e19a3ee02d5e811359ee36fdf3ae597aaf0c90c485624e560968", jwt, apn);
     }
 }

@@ -16,9 +16,6 @@
           <option value="admin-code" />
           <option value="user" />
           <option value="x-api-key" />
-          <option value="apns-push-type" />
-          <option value="apns-priority" />
-          <option value="apns-topic" />
         </set>
       </option>
     </inspection_tool>
