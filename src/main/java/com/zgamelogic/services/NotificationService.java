@@ -22,11 +22,11 @@ import java.util.Date;
 
 public abstract class NotificationService {
 
-    public static void sendNotification(String device, String apnEndpoint){
+    public static void sendNotification(String device, String jwt, String apnEndpoint){
         String url = apnEndpoint + "/3/device/" + device;
         System.out.println(url);
         HttpHeaders headers = new HttpHeaders();
-        headers.add("authorization", "bearer " + authJWT());
+        headers.add("authorization", "bearer " + jwt);
         headers.add("apns-push-type", "alert");
         headers.add("apns-priority", "5");
         headers.add("apns-topic", "zgamelogic.Minecraft-Server-Utility");
@@ -57,6 +57,6 @@ public abstract class NotificationService {
 //            throw new RuntimeException(e);
 //        }
 
-        return "eyJhbGciOiJFUzI1NiIsImtpZCI6IkRSNFhNNzZKV0oifQ.eyJpc3MiOiI2TTM4Ujk3TDREIiwiaWF0IjoxNzAzMzkwMjc1fQ.zm7hDJ3pFR_CQrxx3xC1JaOhjkWjzl80FqqK3CRIzfWRI2g9n_gp8V_r4SO1HLb3aldIdXmSx32It95Lv_h7XA";
+        return "";
     }
 }

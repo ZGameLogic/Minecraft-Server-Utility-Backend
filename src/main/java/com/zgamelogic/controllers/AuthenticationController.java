@@ -166,7 +166,7 @@ public class AuthenticationController {
     }
 
     @GetMapping("test")
-    private void test(){
-        NotificationService.sendNotification("22a57180b3a7e19a3ee02d5e811359ee36fdf3ae597aaf0c90c485624e560968", apn);
+    private void test(@RequestHeader("jwt") String jwt){
+        NotificationService.sendNotification("22a57180b3a7e19a3ee02d5e811359ee36fdf3ae597aaf0c90c485624e560968", jwt, apn);
     }
 }
