@@ -2,6 +2,7 @@ package com.zgamelogic.services;
 
 import com.zgamelogic.data.services.discord.DiscordToken;
 import com.zgamelogic.data.services.discord.DiscordUser;
+import com.zgamelogic.data.services.discord.MessagePacket;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -57,11 +58,12 @@ public abstract class DiscordService {
         String url = "https://zgamelogic.com:2000/message";
         HttpHeaders headers = new HttpHeaders();
         RestTemplate restTemplate = new RestTemplate();
-        MultiValueMap<String, Object> requestBody = new LinkedMultiValueMap<>();
-        requestBody.add("guildId", 330751526735970305L);
-        requestBody.add("channelId", 1185639873709879388L);
-        requestBody.add("message", message);
-        requestBody.add("mentionIds", new String[]{"1062120824770936895"});
-        restTemplate.exchange(url, HttpMethod.POST,  new HttpEntity<>(requestBody, headers), String.class);
+        MessagePacket messagePacket = new MessagePacket(
+                330751526735970305L,
+                1185639873709879388L,
+                message,
+                new String[]{"1062120824770936895"}
+        );
+        restTemplate.exchange(url, HttpMethod.POST,  new HttpEntity<>(messagePacket, headers), String.class);
     }
 }
