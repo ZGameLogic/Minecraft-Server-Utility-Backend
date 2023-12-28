@@ -89,6 +89,22 @@ public class MinecraftServer {
         return new MinecraftServerLog(log.toString());
     }
 
+    public MinecraftServerLog loadChatLog(){
+        File logFile = new File(getFilePath() + "/logs/latest.log");
+        StringBuilder log = new StringBuilder();
+        try {
+            Scanner input = new Scanner(logFile);
+            input.useDelimiter("\n");
+            input.forEachRemaining(line -> {
+                if(line.contains("]: <")) {
+                    log.append(line).append("\n");
+                }
+            });
+            input.close();
+        } catch (FileNotFoundException ignored) {}
+        return new MinecraftServerLog(log.toString());
+    }
+
     public void startServer(){
         if(status.equals(MC_SERVER_STARTING) ||
                 status.equals(MC_SERVER_ONLINE) ||

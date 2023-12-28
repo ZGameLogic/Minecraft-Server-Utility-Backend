@@ -11,6 +11,7 @@ import com.zgamelogic.data.services.minecraft.*;
 import com.zgamelogic.data.services.minecraft.MinecraftSocketMessage;
 import com.zgamelogic.services.CurseforgeService;
 import com.zgamelogic.services.MinecraftService;
+import com.zgamelogic.services.NotificationService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.validation.Valid;
@@ -48,15 +49,19 @@ public class MinecraftController {
     private final WebSocketService webSocketService;
     private final UserRepository userRepository;
 
+    private final NotificationService notificationService;
+
     @Autowired
     private MinecraftController(
             CurseforgeProjectRepository curseforgeProjectRepository,
             WebSocketService webSocketService,
-            UserRepository userRepository
+            UserRepository userRepository,
+            NotificationService notificationService
     ){
         this.webSocketService = webSocketService;
         this.curseforgeProjectRepository = curseforgeProjectRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
         if(!SERVERS_DIR.exists()) SERVERS_DIR.mkdirs();
         serverVersions = new HashMap<>();
         servers = new HashMap<>();

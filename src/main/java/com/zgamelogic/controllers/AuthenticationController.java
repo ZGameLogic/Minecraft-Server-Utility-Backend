@@ -1,7 +1,9 @@
 package com.zgamelogic.controllers;
 
+import com.zgamelogic.data.database.user.NotificationConfiguration;
 import com.zgamelogic.data.database.user.User;
 import com.zgamelogic.data.database.user.UserRepository;
+import com.zgamelogic.data.services.auth.NotificationMessage;
 import com.zgamelogic.data.services.auth.Permission;
 import com.zgamelogic.data.services.discord.DiscordToken;
 import com.zgamelogic.data.services.discord.DiscordUser;
@@ -13,7 +15,6 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -71,7 +72,8 @@ public class AuthenticationController {
                 userRepository.save(databaseUser);
             }
             Map<String, String> permissions = userRepository.getReferenceById(user.getId()).getPermissions();
-            return ResponseEntity.ok(new MSUUser(user, token, permissions));
+            Map<String, NotificationConfiguration> notifications = userRepository.getReferenceById(user.getId()).getNotifications();
+            return ResponseEntity.ok(new MSUUser(user, token, permissions, notifications));
         } catch (Exception e){
             return ResponseEntity.badRequest().build();
         }
@@ -83,6 +85,20 @@ public class AuthenticationController {
     ){
         if(!userRepository.userHasPermission(userId, MC_GENERAL_PERMISSION_CAT, MC_USER_MANAGEMENT_PERMISSION)) return ResponseEntity.status(401).build();
         return ResponseEntity.ok(userRepository.findAll());
+    }
+
+    @SuppressWarnings("rawtypes")
+    @PostMapping("/user/notifications/toggle")
+    private ResponseEntity toggleUserNotification(
+            @RequestHeader(name = "user") String userId,
+            @RequestBody NotificationMessage notificationMessage
+    ){
+        if(userId == null) return ResponseEntity.status(401).build();
+        if(!userRepository.existsById(userId)) return ResponseEntity.status(404).build();
+        User user = userRepository.getReferenceById(userId);
+        user.toggleNotification(notificationMessage.getServer(), notificationMessage.getNotification());
+        userRepository.save(user);
+        return ResponseEntity.status(200).build();
     }
 
     @SuppressWarnings("rawtypes")
@@ -103,6 +119,7 @@ public class AuthenticationController {
         return ResponseEntity.status(200).build();
     }
 
+    @SuppressWarnings("rawtypes")
     @PostMapping("/user/permissions/remove/{id}")
     private ResponseEntity removeUserPermissions(
             @RequestHeader(name = "user", required = false) String userId,
@@ -116,6 +133,32 @@ public class AuthenticationController {
         if(!userRepository.existsById(id)) return ResponseEntity.status(404).build();
         User user = userRepository.getReferenceById(id);
         user.removePermission(permission);
+        userRepository.save(user);
+        return ResponseEntity.status(200).build();
+    }
+
+    @SuppressWarnings("rawtypes")
+    @PostMapping("user/devices/register/{device}")
+    private ResponseEntity registerDevice(
+            @RequestHeader(name = "user") String userId,
+            @PathVariable String device
+    ){
+        if(!userRepository.existsById(userId)) return ResponseEntity.status(404).build();
+        User user = userRepository.getReferenceById(userId);
+        user.registerDevice(device);
+        userRepository.save(user);
+        return ResponseEntity.status(200).build();
+    }
+
+    @SuppressWarnings("rawtypes")
+    @PostMapping("user/devices/unregister/{device}")
+    private ResponseEntity unregisterDevice(
+            @RequestHeader(name = "user") String userId,
+            @PathVariable String device
+    ){
+        if(!userRepository.existsById(userId)) return ResponseEntity.status(404).build();
+        User user = userRepository.getReferenceById(userId);
+        user.unregisterDevice(device);
         userRepository.save(user);
         return ResponseEntity.status(200).build();
     }
