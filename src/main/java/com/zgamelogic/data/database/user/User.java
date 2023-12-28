@@ -3,15 +3,13 @@ package com.zgamelogic.data.database.user;
 import com.zgamelogic.data.services.auth.Permission;
 import com.zgamelogic.data.services.discord.DiscordToken;
 import com.zgamelogic.data.services.discord.DiscordUser;
+import com.zgamelogic.data.services.auth.NotificationMessage.Toggle;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.util.*;
-
-import static com.zgamelogic.data.Constants.MC_ADMIN_PERMISSION;
-import static com.zgamelogic.data.Constants.MC_GENERAL_PERMISSION_CAT;
 
 @Data
 @Entity
@@ -32,6 +30,17 @@ public class User {
     @MapKeyColumn(name = "object_name")
     @Column(name = "permissions")
     private Map<String, String> permissions = new HashMap<>();
+
+    @ElementCollection
+    @CollectionTable(name = "user_notifications", joinColumns = @JoinColumn(name = "user_id"))
+    @MapKeyColumn(name = "server_name")
+    @Column(name = "notifications")
+    private Map<String, NotificationConfiguration> notifications = new HashMap<>();
+
+    @ElementCollection
+    @CollectionTable(name = "user_device_ids", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "device")
+    private Set<String> deviceIds;
 
     public User(DiscordUser discordUser, DiscordToken token){
         id = discordUser.getId();
@@ -70,9 +79,23 @@ public class User {
         removePermission(permission.getServer(), permission.getPermission());
     }
 
-    public boolean hasPermission(String obj, String permission){
-        if(permissions.containsKey(MC_GENERAL_PERMISSION_CAT) && permissions.get(MC_GENERAL_PERMISSION_CAT).contains(MC_ADMIN_PERMISSION)) return true;
-        if(!permissions.containsKey(obj)) return false;
-        return permissions.get(obj).contains(permission);
+    public void registerDevice(String id){
+        deviceIds.add(id);
+    }
+
+    public void unregisterDevice(String id){
+        deviceIds.remove(id);
+    }
+
+    public void toggleNotification(String server, Toggle notification){
+        if(notifications.containsKey(server)){
+            NotificationConfiguration n = notifications.get(server);
+            n.toggle(notification);
+            notifications.put(server, n);
+        } else {
+            NotificationConfiguration n = new NotificationConfiguration();
+            n.toggle(notification);
+            notifications.put(server, n);
+        }
     }
 }
