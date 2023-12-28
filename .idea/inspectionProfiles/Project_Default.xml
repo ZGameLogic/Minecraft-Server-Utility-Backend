@@ -19,6 +19,7 @@
           <option value="apns-push-type" />
           <option value="apns-priority" />
           <option value="apns-topic" />
+          <option value="apns-expiration" />
         </set>
       </option>
     </inspection_tool>

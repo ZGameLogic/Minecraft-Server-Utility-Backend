@@ -1,62 +1,66 @@
 package com.zgamelogic.services;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zgamelogic.data.services.applePushNotification.ApplePushNotification;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.security.interfaces.RSAPrivateKey;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Date;
 
-public abstract class NotificationService {
+@Service
+@PropertySource("File:msu.properties")
+public class NotificationService {
 
-    public static void sendNotification(String device, String jwt, String apnEndpoint){
+    @Value("${kid}")    private String kid;
+    @Value("${org_id}") private String orgId;
+    @Value("${APN}")    private String apnEndpoint;
+
+    public void sendNotification(String device, ApplePushNotification notification){
         String url = apnEndpoint + "/3/device/" + device;
-        System.out.println(url);
         HttpHeaders headers = new HttpHeaders();
-        headers.add("authorization", "bearer " + jwt);
+        headers.add("authorization", "bearer " + authJWT());
         headers.add("apns-push-type", "alert");
         headers.add("apns-priority", "5");
+        headers.add("apns-expiration", "0");
         headers.add("apns-topic", "zgamelogic.Minecraft-Server-Utility");
-        ApplePushNotification notification = new ApplePushNotification("Test notification");
-        try {
-            System.out.println(new ObjectMapper().writeValueAsString(notification));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> e = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(notification, headers), String.class);
-        System.out.println(e.getStatusCode());
-        System.out.println(e.getBody());
+        RestTemplate restTemplate = new RestTemplate(new OkHttp3ClientHttpRequestFactory());
+        restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(notification, headers), String.class);
     }
 
-    private static String authJWT() {
-//        Path keyFilePath = Paths.get("AuthKey_DR4XM76JWJ.p8");
-//        try {
-//            String privateKey = Files.readString(keyFilePath, StandardCharsets.UTF_8);
-//            Algorithm algorithm = Algorithm.RSA256(null, );
-//
-//            return JWT.create()
-//                    .withIssuer("your-issuer")
-//                    .withAudience("your-audience")
-//                    .withExpiresAt(new Date(System.currentTimeMillis() + 1000 * 100))
-//                    .sign(algorithm);
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
+    private String authJWT() {
+        try {
+            String privateKeyPEM = new String(Files.readAllBytes(new File("AuthKey_" + kid + ".p8").toPath()));
+            privateKeyPEM = privateKeyPEM.replace("-----BEGIN PRIVATE KEY-----", "")
+                    .replace("-----END PRIVATE KEY-----", "")
+                    .replaceAll("\\s", ""); // Remove any whitespaces or newlines
 
-        return "";
+            byte[] decodedKey = org.bouncycastle.util.encoders.Base64.decode(privateKeyPEM);
+
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(decodedKey);
+            KeyFactory keyFactory = KeyFactory.getInstance("EC");
+            PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+
+            return Jwts.builder()
+                    .setIssuer(orgId)
+                    .setIssuedAt(new Date())
+                    .signWith(privateKey, SignatureAlgorithm.ES256)
+                    .setHeaderParam("kid", kid)
+                    .compact();
+        } catch (Exception e){
+
+            return "";
+        }
     }
 }
