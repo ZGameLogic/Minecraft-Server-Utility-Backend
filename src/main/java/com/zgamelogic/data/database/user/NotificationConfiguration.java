@@ -20,4 +20,22 @@ public class NotificationConfiguration {
             case STATUS -> status = !status;
         }
     }
+
+    public boolean enabled(Toggle notification){
+        switch (notification){
+            case PLAYER -> {
+                return player;
+            }
+            case CHAT -> {
+                return chat;
+            }
+            case LIVE -> {
+                return live;
+            }
+            case STATUS -> {
+                return status;
+            }
+        }
+        return false;
+    }
 }

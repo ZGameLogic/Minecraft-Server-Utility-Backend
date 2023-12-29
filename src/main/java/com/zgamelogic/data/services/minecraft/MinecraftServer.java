@@ -3,7 +3,9 @@ package com.zgamelogic.data.services.minecraft;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.zgamelogic.data.minecraft.MinecraftServerNotificationAction;
 import com.zgamelogic.data.minecraft.MinecraftServerSocketAction;
+import com.zgamelogic.data.minecraft.MinecraftServerSocketActions;
 import com.zgamelogic.data.minecraft.SimpleLogger;
 import com.zgamelogic.services.DiscordService;
 import lombok.Data;
@@ -45,26 +47,30 @@ public class MinecraftServer {
     @JsonIgnore
     private PrintStream processInput;
     @JsonIgnore
-    private MinecraftServerSocketAction messageAction;
+    private MinecraftServerSocketActions socketActions;
     @JsonIgnore
-    private MinecraftServerSocketAction statusAction;
-    @JsonIgnore
-    private MinecraftServerSocketAction playerAction;
-    @JsonIgnore
-    private MinecraftServerSocketAction updateAction;
+    private MinecraftServerNotificationAction playerNotification;
 
     public MinecraftServer(
             File serverDir,
             MinecraftServerSocketAction messageAction,
             MinecraftServerSocketAction statusAction,
             MinecraftServerSocketAction playerAction,
-            MinecraftServerSocketAction updateAction
+            MinecraftServerSocketAction updateAction,
+            MinecraftServerNotificationAction playerNotification
     ){
+        this(serverDir, new MinecraftServerSocketActions(
+                messageAction,
+                statusAction,
+                playerAction,
+                updateAction
+        ), playerNotification);
+    }
+
+    public MinecraftServer(File serverDir, MinecraftServerSocketActions socketActions, MinecraftServerNotificationAction playerNotification){
         filePath = serverDir.getPath();
-        this.messageAction = messageAction;
-        this.statusAction = statusAction;
-        this.playerAction = playerAction;
-        this.updateAction = updateAction;
+        this.socketActions = socketActions;
+        this.playerNotification = playerNotification;
         status = MC_SERVER_OFFLINE;
         online = new LinkedList<>();
         serverProperties = new HashMap<>();
@@ -304,11 +310,15 @@ public class MinecraftServer {
         } else if(line.contains("Stopping server")){
             status = MC_SERVER_STOPPING;
         } else if(line.endsWith(" joined the game") && !line.contains("<") && !line.contains(">")){
-            online.add(extractUsername(line));
-            playerAction.action(name, new MinecraftServerPlayersPacket(online));
+            String username = extractUsername(line);
+            online.add(username);
+            socketActions.getPlayerAction().action(name, new MinecraftServerPlayersPacket(online));
+            playerNotification.action(name, username, true, online);
         } else if(line.endsWith(" left the game") && !line.contains("<") && !line.contains(">")){
-            online.remove(extractUsername(line));
-            playerAction.action(name, new MinecraftServerPlayersPacket(online));
+            String username = extractUsername(line);
+            online.remove(username);
+            socketActions.getPlayerAction().action(name, new MinecraftServerPlayersPacket(online));
+            playerNotification.action(name, username, false, online);
         }
     }
 
@@ -328,7 +338,7 @@ public class MinecraftServer {
                     if(line == null) continue;
                     log.debug(line);
                     processServerLine(line);
-                    messageAction.action(name, line);
+                    socketActions.getMessageAction().action(name, line);
                 } catch (IOException ignored) {}
             }
             if(status.equals(MC_SERVER_STOPPING)){
@@ -339,13 +349,13 @@ public class MinecraftServer {
             online.clear();
         }, name + " watch").start();
         new Thread(() -> { // Thread for watching server status.
-            statusAction.action(name, status);
+            socketActions.getStatusAction().action(name, status);
             String currentStatus = status;
             while(true){
                 sleep(1000);
                 if(currentStatus.equals(status)) continue;
                 currentStatus = status;
-                statusAction.action(name, status);
+                socketActions.getStatusAction().action(name, status);
             }
         }, name + " status watch").start();
     }
@@ -400,6 +410,6 @@ public class MinecraftServer {
         HashMap<String, String> vals = new HashMap<>();
         vals.put("stage", stage);
         vals.put("percentage", percentage + "");
-        updateAction.action(name, vals);
+        socketActions.getUpdateAction().action(name, vals);
     }
 }

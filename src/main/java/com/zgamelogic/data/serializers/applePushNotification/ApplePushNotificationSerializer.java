@@ -14,6 +14,7 @@ public class ApplePushNotificationSerializer extends JsonSerializer<ApplePushNot
 
         jsonGenerator.writeStartObject();
         jsonGenerator.writeObjectFieldStart("aps");
+        jsonGenerator.writeStringField("sound", "bingbong.aiff");
         jsonGenerator.writeObjectFieldStart("alert");
         jsonGenerator.writeStringField("title", notification.getTitle());
 

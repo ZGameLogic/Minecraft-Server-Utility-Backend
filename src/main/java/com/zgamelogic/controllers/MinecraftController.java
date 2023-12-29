@@ -6,6 +6,8 @@ import com.zgamelogic.data.database.curseforge.CurseforgeProject;
 import com.zgamelogic.data.database.curseforge.CurseforgeProjectRepository;
 import com.zgamelogic.data.database.user.User;
 import com.zgamelogic.data.database.user.UserRepository;
+import com.zgamelogic.data.services.applePushNotification.ApplePushNotification;
+import com.zgamelogic.data.services.auth.NotificationMessage;
 import com.zgamelogic.data.services.curseforge.CurseforgeMod;
 import com.zgamelogic.data.services.minecraft.*;
 import com.zgamelogic.data.services.minecraft.MinecraftSocketMessage;
@@ -67,7 +69,7 @@ public class MinecraftController {
         servers = new HashMap<>();
         for(File server: SERVERS_DIR.listFiles()){
             if(server.isDirectory()) {
-                servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction));
+                servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction, this::serverPlayerNotification));
             }
         }
     }
@@ -227,7 +229,7 @@ public class MinecraftController {
                 editRunBat(runbat);
             } catch (FileNotFoundException ignored) {}
         }
-        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction));
+        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction, this::serverPlayerNotification));
         if(config.isAutoStart()) servers.get(data.getName()).startServer();
         serverInstallAction(data.getName(), "Installed");
     }
@@ -322,6 +324,15 @@ public class MinecraftController {
         });
     }
 
+//    @Scheduled(cron = "*/30 * * * * *")
+//    private void test(){
+//        log.info("Sending test notification");
+//        LinkedList<String> players = new LinkedList<>();
+//        players.add("zabory");
+//        MinecraftServerPlayersPacket packet = new MinecraftServerPlayersPacket(players);
+//        serverPlayerNotification("Test", "zabory", true, players);
+//    }
+
     private boolean checkOpenServerName(String name){
         return !servers.containsKey(name);
     }
@@ -361,5 +372,17 @@ public class MinecraftController {
     private void serverPlayerAction(String name, Object packet){
         MinecraftSocketMessage msm = new MinecraftSocketMessage("player", packet, name);
         webSocketService.sendMessage("/server/" + name, msm);
+    }
+
+    private void serverPlayerNotification(String server, String player, boolean joined, LinkedList<String> online){
+        String body = online.isEmpty() ? "No players are on " + server : "Players online: " + String.join(", ", online);
+        ApplePushNotification notification = new ApplePushNotification(
+                player + (joined ? " has joined " + server : "has left " + server),
+                body
+        );
+        userRepository.findAll().forEach(user -> {
+            if(!user.hasNotificationEnabled(server, NotificationMessage.Toggle.PLAYER)) return;
+            user.getDeviceIds().forEach(device -> notificationService.sendNotification(device, notification));
+        });
     }
 }
