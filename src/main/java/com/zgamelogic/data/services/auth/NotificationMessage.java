@@ -7,7 +7,6 @@ import lombok.Data;
 public class NotificationMessage {
     public enum Toggle {
         PLAYER,
-        CHAT,
         LIVE,
         STATUS;
 
