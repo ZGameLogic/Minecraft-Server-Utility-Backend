@@ -70,6 +70,7 @@ public class MinecraftController {
         for(File server: SERVERS_DIR.listFiles()){
             if(server.isDirectory()) {
                 servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction, this::serverPlayerNotification, this::serverStatusNotification));
+                updateUserNotificationsAndPermissions(server.getName());
             }
         }
     }
@@ -170,7 +171,15 @@ public class MinecraftController {
         User user = userRepository.getReferenceById(id);
         user.addPermission(data.getName(), MC_USE_CONSOLE_SERVER_PERMISSION + MC_ISSUE_COMMANDS_SERVER_PERMISSION + MC_EDIT_SERVER_PROPERTIES_PERMISSION);
         userRepository.save(user);
+        updateUserNotificationsAndPermissions(data.getName());
         return ResponseEntity.ok(CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, "Starting install process. Listen on the websocket for completion"));
+    }
+
+    private void updateUserNotificationsAndPermissions(String server) {
+        userRepository.findAll().forEach(user -> {
+            user.createNotificationPermission(server);
+            userRepository.save(user);
+        });
     }
 
     private void installServer(MinecraftServerCreationData data) {
@@ -323,15 +332,6 @@ public class MinecraftController {
             server.updateServerVersion(ver, download);
         });
     }
-
-//    @Scheduled(cron = "*/30 * * * * *")
-//    private void test(){
-//        log.info("Sending test notification");
-//        LinkedList<String> players = new LinkedList<>();
-//        players.add("zabory");
-//        MinecraftServerPlayersPacket packet = new MinecraftServerPlayersPacket(players);
-//        serverPlayerNotification("Test", "zabory", true, players);
-//    }
 
     private boolean checkOpenServerName(String name){
         return !servers.containsKey(name);
