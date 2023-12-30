@@ -64,6 +64,7 @@ public class AuthenticationController {
                 userRepository.save(databaseUser);
             } else {
                 User databaseUser = new User(user, token);
+                databaseUser.addPermission(MC_GENERAL_PERMISSION_CAT, "");
                 if(userRepository.count() == 0) {
                     databaseUser.addPermission(MC_GENERAL_PERMISSION_CAT, MC_CREATE_SERVER_PERMISSION);
                     databaseUser.addPermission(MC_GENERAL_PERMISSION_CAT, MC_USER_MANAGEMENT_PERMISSION);

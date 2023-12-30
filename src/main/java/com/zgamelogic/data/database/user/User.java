@@ -103,4 +103,9 @@ public class User {
         if(!notifications.containsKey(server)) return false;
         return notifications.get(server).enabled(notification);
     }
+
+    public void createNotificationPermission(String server){
+        if(!notifications.containsKey(server)) notifications.put(server, new NotificationConfiguration());
+        if(!permissions.containsKey(server)) permissions.put(server, "");
+    }
 }
