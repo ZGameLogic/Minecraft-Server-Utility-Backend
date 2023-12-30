@@ -2,6 +2,6 @@ package com.zgamelogic.data.minecraft;
 
 import java.util.LinkedList;
 
-public interface MinecraftServerNotificationAction {
+public interface MinecraftServerPlayerNotificationAction {
     void action(String server, String player, boolean joined, LinkedList<String> online);
 }

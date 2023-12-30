@@ -20,7 +20,6 @@ public interface UserRepository extends JpaRepository<User, String> {
             FROM User u JOIN u.notifications n WHERE
             u.id = :userId AND KEY(n) = :server
             AND CASE WHEN :notification = 'PLAYER' THEN n.player
-                    WHEN :notification = 'CHAT' THEN n.chat
                     WHEN :notification = 'LIVE' THEN n.live
                     WHEN :notification = 'STATUS' THEN n.status
             END = true

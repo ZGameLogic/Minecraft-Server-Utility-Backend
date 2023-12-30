@@ -69,7 +69,7 @@ public class MinecraftController {
         servers = new HashMap<>();
         for(File server: SERVERS_DIR.listFiles()){
             if(server.isDirectory()) {
-                servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction, this::serverPlayerNotification));
+                servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction, this::serverPlayerNotification, this::serverStatusNotification));
             }
         }
     }
@@ -229,7 +229,7 @@ public class MinecraftController {
                 editRunBat(runbat);
             } catch (FileNotFoundException ignored) {}
         }
-        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction, this::serverPlayerNotification));
+        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction, this::serverPlayerNotification, this::serverStatusNotification));
         if(config.isAutoStart()) servers.get(data.getName()).startServer();
         serverInstallAction(data.getName(), "Installed");
     }
@@ -382,6 +382,17 @@ public class MinecraftController {
         );
         userRepository.findAll().forEach(user -> {
             if(!user.hasNotificationEnabled(server, NotificationMessage.Toggle.PLAYER)) return;
+            user.getDeviceIds().forEach(device -> notificationService.sendNotification(device, notification));
+        });
+    }
+
+    private void serverStatusNotification(String server, String status){
+        ApplePushNotification notification = new ApplePushNotification(
+                "Status for " + server + " has changed",
+                "Status: " + status
+        );
+        userRepository.findAll().forEach(user -> {
+            if(!user.hasNotificationEnabled(server, NotificationMessage.Toggle.STATUS)) return;
             user.getDeviceIds().forEach(device -> notificationService.sendNotification(device, notification));
         });
     }

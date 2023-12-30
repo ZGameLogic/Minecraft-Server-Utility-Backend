@@ -3,10 +3,7 @@ package com.zgamelogic.data.services.minecraft;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.zgamelogic.data.minecraft.MinecraftServerNotificationAction;
-import com.zgamelogic.data.minecraft.MinecraftServerSocketAction;
-import com.zgamelogic.data.minecraft.MinecraftServerSocketActions;
-import com.zgamelogic.data.minecraft.SimpleLogger;
+import com.zgamelogic.data.minecraft.*;
 import com.zgamelogic.services.DiscordService;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -49,7 +46,9 @@ public class MinecraftServer {
     @JsonIgnore
     private MinecraftServerSocketActions socketActions;
     @JsonIgnore
-    private MinecraftServerNotificationAction playerNotification;
+    private MinecraftServerPlayerNotificationAction playerNotification;
+    @JsonIgnore
+    private MinecraftServerStatusNotificationAction statusNotificationAction;
 
     public MinecraftServer(
             File serverDir,
@@ -57,20 +56,22 @@ public class MinecraftServer {
             MinecraftServerSocketAction statusAction,
             MinecraftServerSocketAction playerAction,
             MinecraftServerSocketAction updateAction,
-            MinecraftServerNotificationAction playerNotification
+            MinecraftServerPlayerNotificationAction playerNotification,
+            MinecraftServerStatusNotificationAction statusNotificationAction
     ){
         this(serverDir, new MinecraftServerSocketActions(
                 messageAction,
                 statusAction,
                 playerAction,
                 updateAction
-        ), playerNotification);
+        ), playerNotification, statusNotificationAction);
     }
 
-    public MinecraftServer(File serverDir, MinecraftServerSocketActions socketActions, MinecraftServerNotificationAction playerNotification){
+    public MinecraftServer(File serverDir, MinecraftServerSocketActions socketActions, MinecraftServerPlayerNotificationAction playerNotification, MinecraftServerStatusNotificationAction statusNotificationAction){
         filePath = serverDir.getPath();
         this.socketActions = socketActions;
         this.playerNotification = playerNotification;
+        this.statusNotificationAction = statusNotificationAction;
         status = MC_SERVER_OFFLINE;
         online = new LinkedList<>();
         serverProperties = new HashMap<>();
@@ -350,12 +351,14 @@ public class MinecraftServer {
         }, name + " watch").start();
         new Thread(() -> { // Thread for watching server status.
             socketActions.getStatusAction().action(name, status);
+            statusNotificationAction.action(name, status);
             String currentStatus = status;
             while(true){
                 sleep(1000);
                 if(currentStatus.equals(status)) continue;
                 currentStatus = status;
                 socketActions.getStatusAction().action(name, status);
+                statusNotificationAction.action(name, status);
             }
         }, name + " status watch").start();
     }
