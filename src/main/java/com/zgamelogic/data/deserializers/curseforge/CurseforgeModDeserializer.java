@@ -1,6 +1,5 @@
 package com.zgamelogic.data.deserializers.curseforge;
 
-import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -13,7 +12,7 @@ import java.io.IOException;
 
 public class CurseforgeModDeserializer extends JsonDeserializer<CurseforgeMod> {
     @Override
-    public CurseforgeMod deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JacksonException {
+    public CurseforgeMod deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
         CurseforgeMod mod = new CurseforgeMod();
         JsonNode json = jsonParser.getCodec().readTree(jsonParser);
         JsonNode node = json.get("data");
