@@ -6,7 +6,8 @@ import com.zgamelogic.data.database.curseforge.CurseforgeProject;
 import com.zgamelogic.data.database.curseforge.CurseforgeProjectRepository;
 import com.zgamelogic.data.database.user.User;
 import com.zgamelogic.data.database.user.UserRepository;
-import com.zgamelogic.data.services.applePushNotification.ApplePushNotification;
+import com.zgamelogic.data.services.apple.ApplePushNotification;
+import com.zgamelogic.data.services.apple.AppleWidgetPacket;
 import com.zgamelogic.data.services.auth.NotificationMessage;
 import com.zgamelogic.data.services.curseforge.CurseforgeMod;
 import com.zgamelogic.data.services.minecraft.*;
@@ -115,6 +116,13 @@ public class MinecraftController {
         HashMap<String, LinkedList<String>> data = new HashMap<>();
         serverVersions.forEach((key, value) -> data.put(key, new LinkedList<>(value.keySet())));
         return ResponseEntity.ok(data);
+    }
+
+    @ResponseBody
+    @GetMapping("/widget/ios")
+    public ResponseEntity<AppleWidgetPacket> getWidgetPacket(){
+        AppleWidgetPacket packet = new AppleWidgetPacket(servers.values());
+        return ResponseEntity.ok(packet);
     }
 
     @SuppressWarnings("rawtypes")

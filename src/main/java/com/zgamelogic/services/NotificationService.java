@@ -1,6 +1,6 @@
 package com.zgamelogic.services;
 
-import com.zgamelogic.data.services.applePushNotification.ApplePushNotification;
+import com.zgamelogic.data.services.apple.ApplePushNotification;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +37,18 @@ public class NotificationService {
         headers.add("apns-topic", "zgamelogic.Minecraft-Server-Utility");
         RestTemplate restTemplate = new RestTemplate(new OkHttp3ClientHttpRequestFactory());
         restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(notification, headers), String.class);
+    }
+
+    public void startLiveActivity(){
+
+    }
+
+    public void updateLiveActivity(){
+
+    }
+
+    public void endLiveActivity(){
+
     }
 
     private String authJWT() {
