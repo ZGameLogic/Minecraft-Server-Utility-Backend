@@ -160,6 +160,7 @@ public class MinecraftServer {
     }
 
     public void updateServerVersion(String version, String download){
+        if(status.equals(MC_SERVER_UPDATING)) return;
         log.debug("Updating " + name + " to " + version);
         if(status.equals(MC_SERVER_ONLINE)) stopServer();
         blockThreadUntilOffline();

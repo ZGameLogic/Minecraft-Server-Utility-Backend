@@ -293,7 +293,7 @@ public class MinecraftController {
                 .forEach(MinecraftServer::stopServer);
     }
 
-    @Scheduled(cron = "50 */30 * * * *")
+    @Scheduled(cron = "0 */29 * * * *")
     private void updateServerVersions(){
         serverVersions = MinecraftService.getMinecraftServerVersions(curseforgeToken, curseforgeProjectRepository.findAll());
     }
