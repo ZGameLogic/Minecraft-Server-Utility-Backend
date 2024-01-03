@@ -1,7 +1,7 @@
-package com.zgamelogic.data.services.applePushNotification;
+package com.zgamelogic.data.services.apple;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.zgamelogic.data.serializers.applePushNotification.ApplePushNotificationSerializer;
+import com.zgamelogic.data.serializers.apple.ApplePushNotificationSerializer;
 import lombok.Data;
 
 @Data
@@ -18,6 +18,7 @@ public class ApplePushNotification {
     public ApplePushNotification(String title, String subtitle){
         this(title, subtitle, null);
     }
+
     public ApplePushNotification(String title, String subtitle, String body){
         this.title = title;
         this.subtitle = subtitle;

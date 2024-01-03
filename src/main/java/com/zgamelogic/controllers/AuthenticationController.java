@@ -8,6 +8,7 @@ import com.zgamelogic.data.services.auth.Permission;
 import com.zgamelogic.data.services.discord.DiscordToken;
 import com.zgamelogic.data.services.discord.DiscordUser;
 import com.zgamelogic.data.services.discord.MSUUser;
+import com.zgamelogic.services.DiscordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,23 +21,20 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.zgamelogic.data.Constants.*;
-import static com.zgamelogic.services.DiscordService.*;
 
 @Slf4j
 @RestController
 @PropertySource("File:msu.properties")
 public class AuthenticationController {
-    @Value("${client.id}") private String discordClientId;
-    @Value("${client.secret}") private String discordClientSecret;
-    @Value("${redirect.url}") private String discordRedirectUrl;
-
     @Value("${admin.code}") private String adminCode;
 
     private final UserRepository userRepository;
+    private final DiscordService discordService;
 
     @Autowired
-    public AuthenticationController(UserRepository userRepository) {
+    public AuthenticationController(UserRepository userRepository, DiscordService discordService) {
         this.userRepository = userRepository;
+        this.discordService = discordService;
     }
 
     @PostMapping("/auth/login")
@@ -48,16 +46,16 @@ public class AuthenticationController {
         try {
             DiscordToken token;
             if(code != null){
-                token = postForToken(code, discordClientId, discordClientSecret, discordRedirectUrl);
+                token = discordService.postForToken(code);
             } else {
                 Optional<User> user = userRepository.findById(id);
                 if(user.isPresent()){
-                    token = refreshToken(user.get().getRefreshToken(), discordClientId, discordClientSecret);
+                    token = discordService.refreshToken(user.get().getRefreshToken());
                 } else {
                     return ResponseEntity.status(404).build();
                 }
             }
-            DiscordUser user = getUserFromToken(token.getAccess_token());
+            DiscordUser user = discordService.getUserFromToken(token.getAccess_token());
             if(userRepository.existsById(user.getId())){
                 User databaseUser = userRepository.getReferenceById(user.getId());
                 databaseUser.updateUser(user, token);
