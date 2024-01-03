@@ -30,3 +30,5 @@ build/
 
 /data
 msu.properties
+
+*.p8

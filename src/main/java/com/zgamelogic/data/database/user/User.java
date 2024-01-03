@@ -25,19 +25,19 @@ public class User {
     private Date lastLoggedIn;
     private String refreshToken;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
     @MapKeyColumn(name = "object_name")
     @Column(name = "permissions")
     private Map<String, String> permissions = new HashMap<>();
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_notifications", joinColumns = @JoinColumn(name = "user_id"))
     @MapKeyColumn(name = "server_name")
     @Column(name = "notifications")
     private Map<String, NotificationConfiguration> notifications = new HashMap<>();
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_device_ids", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "device")
     private Set<String> deviceIds;
@@ -97,5 +97,15 @@ public class User {
             n.toggle(notification);
             notifications.put(server, n);
         }
+    }
+
+    public boolean hasNotificationEnabled(String server, Toggle notification){
+        if(!notifications.containsKey(server)) return false;
+        return notifications.get(server).enabled(notification);
+    }
+
+    public void createNotificationPermission(String server){
+        if(!notifications.containsKey(server)) notifications.put(server, new NotificationConfiguration());
+        if(!permissions.containsKey(server)) permissions.put(server, "");
     }
 }

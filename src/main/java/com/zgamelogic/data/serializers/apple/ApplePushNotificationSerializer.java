@@ -1,9 +1,9 @@
-package com.zgamelogic.data.serializers.applePushNotification;
+package com.zgamelogic.data.serializers.apple;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.zgamelogic.data.services.applePushNotification.ApplePushNotification;
+import com.zgamelogic.data.services.apple.ApplePushNotification;
 
 import java.io.IOException;
 
@@ -14,6 +14,7 @@ public class ApplePushNotificationSerializer extends JsonSerializer<ApplePushNot
 
         jsonGenerator.writeStartObject();
         jsonGenerator.writeObjectFieldStart("aps");
+        jsonGenerator.writeStringField("sound", "bingbong.aiff");
         jsonGenerator.writeObjectFieldStart("alert");
         jsonGenerator.writeStringField("title", notification.getTitle());
 

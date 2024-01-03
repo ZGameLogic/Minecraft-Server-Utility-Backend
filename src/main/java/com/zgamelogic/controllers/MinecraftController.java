@@ -6,11 +6,15 @@ import com.zgamelogic.data.database.curseforge.CurseforgeProject;
 import com.zgamelogic.data.database.curseforge.CurseforgeProjectRepository;
 import com.zgamelogic.data.database.user.User;
 import com.zgamelogic.data.database.user.UserRepository;
+import com.zgamelogic.data.services.apple.ApplePushNotification;
+import com.zgamelogic.data.services.apple.AppleWidgetPacket;
+import com.zgamelogic.data.services.auth.NotificationMessage;
 import com.zgamelogic.data.services.curseforge.CurseforgeMod;
 import com.zgamelogic.data.services.minecraft.*;
 import com.zgamelogic.data.services.minecraft.MinecraftSocketMessage;
 import com.zgamelogic.services.CurseforgeService;
 import com.zgamelogic.services.MinecraftService;
+import com.zgamelogic.services.NotificationService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.validation.Valid;
@@ -48,21 +52,26 @@ public class MinecraftController {
     private final WebSocketService webSocketService;
     private final UserRepository userRepository;
 
+    private final NotificationService notificationService;
+
     @Autowired
     private MinecraftController(
             CurseforgeProjectRepository curseforgeProjectRepository,
             WebSocketService webSocketService,
-            UserRepository userRepository
+            UserRepository userRepository,
+            NotificationService notificationService
     ){
         this.webSocketService = webSocketService;
         this.curseforgeProjectRepository = curseforgeProjectRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
         if(!SERVERS_DIR.exists()) SERVERS_DIR.mkdirs();
         serverVersions = new HashMap<>();
         servers = new HashMap<>();
         for(File server: SERVERS_DIR.listFiles()){
             if(server.isDirectory()) {
-                servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction));
+                servers.put(server.getName(), new MinecraftServer(server, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction, this::serverPlayerNotification, this::serverStatusNotification));
+                updateUserNotificationsAndPermissions(server.getName());
             }
         }
     }
@@ -107,6 +116,13 @@ public class MinecraftController {
         HashMap<String, LinkedList<String>> data = new HashMap<>();
         serverVersions.forEach((key, value) -> data.put(key, new LinkedList<>(value.keySet())));
         return ResponseEntity.ok(data);
+    }
+
+    @ResponseBody
+    @GetMapping("/widget/ios")
+    public ResponseEntity<AppleWidgetPacket> getWidgetPacket(){
+        AppleWidgetPacket packet = new AppleWidgetPacket(servers.values());
+        return ResponseEntity.ok(packet);
     }
 
     @SuppressWarnings("rawtypes")
@@ -163,7 +179,15 @@ public class MinecraftController {
         User user = userRepository.getReferenceById(id);
         user.addPermission(data.getName(), MC_USE_CONSOLE_SERVER_PERMISSION + MC_ISSUE_COMMANDS_SERVER_PERMISSION + MC_EDIT_SERVER_PROPERTIES_PERMISSION);
         userRepository.save(user);
+        updateUserNotificationsAndPermissions(data.getName());
         return ResponseEntity.ok(CompletionMessage.success(MC_SERVER_CREATE_SUCCESS, "Starting install process. Listen on the websocket for completion"));
+    }
+
+    private void updateUserNotificationsAndPermissions(String server) {
+        userRepository.findAll().forEach(user -> {
+            user.createNotificationPermission(server);
+            userRepository.save(user);
+        });
     }
 
     private void installServer(MinecraftServerCreationData data) {
@@ -222,7 +246,7 @@ public class MinecraftController {
                 editRunBat(runbat);
             } catch (FileNotFoundException ignored) {}
         }
-        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction));
+        servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction, this::serverPlayerNotification, this::serverStatusNotification));
         if(config.isAutoStart()) servers.get(data.getName()).startServer();
         serverInstallAction(data.getName(), "Installed");
     }
@@ -356,5 +380,28 @@ public class MinecraftController {
     private void serverPlayerAction(String name, Object packet){
         MinecraftSocketMessage msm = new MinecraftSocketMessage("player", packet, name);
         webSocketService.sendMessage("/server/" + name, msm);
+    }
+
+    private void serverPlayerNotification(String server, String player, boolean joined, LinkedList<String> online){
+        String body = online.isEmpty() ? "No players are on " + server : "Players online: " + String.join(", ", online);
+        ApplePushNotification notification = new ApplePushNotification(
+                player + (joined ? " has joined " + server : "has left " + server),
+                body
+        );
+        userRepository.findAll().forEach(user -> {
+            if(!user.hasNotificationEnabled(server, NotificationMessage.Toggle.PLAYER)) return;
+            user.getDeviceIds().forEach(device -> notificationService.sendNotification(device, notification));
+        });
+    }
+
+    private void serverStatusNotification(String server, String status){
+        ApplePushNotification notification = new ApplePushNotification(
+                "Status for " + server + " has changed",
+                "Status: " + status
+        );
+        userRepository.findAll().forEach(user -> {
+            if(!user.hasNotificationEnabled(server, NotificationMessage.Toggle.STATUS)) return;
+            user.getDeviceIds().forEach(device -> notificationService.sendNotification(device, notification));
+        });
     }
 }
