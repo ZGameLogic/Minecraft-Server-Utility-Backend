@@ -125,20 +125,50 @@ public abstract class BackendService {
     }
 
     /**
-     * Unzips a file
-     * @param sourceFilePath File path to zip
-     * @param zipFilePath File path to zip to
+     * Zips a file or directory
+     *
+     * @param sourcePath The path of the file or directory to zip
+     * @param zipFilePath The path of the zip file to create
      */
-    public static void zipFile(String sourceFilePath, String zipFilePath) {
-        File sourceFile = new File(sourceFilePath);
+    public static void zip(String sourcePath, String zipFilePath) {
+        File sourceFile = new File(sourcePath);
         try (FileOutputStream fos = new FileOutputStream(zipFilePath);
-             ZipOutputStream zipOut = new ZipOutputStream(fos);
-             FileInputStream fis = new FileInputStream(sourceFile)) {
-            ZipEntry zipEntry = new ZipEntry(sourceFile.getName());
-            zipOut.putNextEntry(zipEntry);
-            StreamUtils.copy(fis, zipOut);
+             ZipOutputStream zipOut = new ZipOutputStream(fos)) {
+            zipFile(sourceFile, sourceFile.getName(), zipOut);
+        } catch (IOException ignored) {
+            ignored.printStackTrace();
+        }
+    }
+
+    private static void zipFile(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
+        if (fileToZip.isHidden()) {
+            return;
+        }
+        if (fileToZip.isDirectory()) {
+            if (fileName.endsWith("/")) {
+                zipOut.putNextEntry(new ZipEntry(fileName));
+            } else {
+                zipOut.putNextEntry(new ZipEntry(fileName + "/"));
+            }
             zipOut.closeEntry();
-        } catch (IOException ignored){}
+            File[] children = fileToZip.listFiles();
+            if (children != null) {
+                for (File childFile : children) {
+                    zipFile(childFile, fileName + "/" + childFile.getName(), zipOut);
+                }
+            }
+            return;
+        }
+        try (FileInputStream fis = new FileInputStream(fileToZip)) {
+            ZipEntry zipEntry = new ZipEntry(fileName);
+            zipOut.putNextEntry(zipEntry);
+            byte[] bytes = new byte[1024];
+            int length;
+            while ((length = fis.read(bytes)) >= 0) {
+                zipOut.write(bytes, 0, length);
+            }
+            zipOut.closeEntry();
+        }
     }
 
     /**
