@@ -195,7 +195,8 @@ public class MinecraftServer {
         }
     }
 
-    private void backupWorld(){
+    public void backupWorld(){
+        log.debug("Backup up world " + serverProperties.get("level-name"));
         File backupDir = new File(new File(filePath).getParentFile().getParentFile() + "/world backups/" + name);
         backupDir.mkdirs();
         String worldName = serverProperties.get("level-name");
@@ -203,8 +204,7 @@ public class MinecraftServer {
         File backupDest = new File(backupDir + "/" + format.format(new Date()) + ".zip");
         int i = 0;
         while(backupDest.exists()){backupDest = new File(backupDir + "/" + format.format(new Date()) + "-" + i + ".zip");}
-        System.out.println(backupDest);
-        zipFile(filePath + "/" + worldName, backupDest.getPath());
+        zip(filePath + "/" + worldName, backupDest.getPath());
     }
 
     private void updateATM9Server(String download, String version){

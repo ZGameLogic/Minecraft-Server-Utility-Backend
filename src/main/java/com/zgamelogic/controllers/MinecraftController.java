@@ -262,6 +262,17 @@ public class MinecraftController {
         return ResponseEntity.status(200).build();
     }
 
+    @SuppressWarnings("rawtypes")
+    @PostMapping("server/backup/{server}")
+    private ResponseEntity backupServerWorld(
+            @PathVariable String server,
+            @RequestHeader(name = "user") String id
+    ){
+        if(!userRepository.userHasPermission(id, server, MC_EDIT_SERVER_PROPERTIES_PERMISSION)) return ResponseEntity.status(401).build();
+        new Thread(() -> servers.get(server).backupWorld(), "Backup world").start();
+        return ResponseEntity.status(200).build();
+    }
+
     @ResponseBody
     @GetMapping("curseforge/project")
     private ResponseEntity<CurseforgeMod> getCurseforgeProject(
