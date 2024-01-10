@@ -362,6 +362,18 @@ public class MinecraftServer {
                 statusNotificationAction.action(name, status);
             }
         }, name + " status watch").start();
+        new Thread(() -> { // Thread for watching for stopping status
+            while(true){
+                if(status.equals(MC_SERVER_STOPPING)){
+                    sleep(40000);
+                    if(status.equals(MC_SERVER_STOPPING)){
+                        serverProcess.destroyForcibly();
+                        status = MC_SERVER_CRASHED;
+                    }
+                }
+                sleep(1000);
+            }
+        }, "Stopping thread").start();
     }
 
     private void loadServerProperties(){
