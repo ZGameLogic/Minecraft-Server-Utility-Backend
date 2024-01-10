@@ -182,22 +182,22 @@ public class MinecraftServer {
         processInput.flush();
     }
 
-    public void updateServerVersion(String version, String download){
+    public void updateServerVersion(String version, String download, File masterBackupDir){
         if(status.equals(MC_SERVER_UPDATING)) return;
         log.debug("Updating " + name + " to " + version);
         if(status.equals(MC_SERVER_ONLINE)) stopServer();
         blockThreadUntilOffline();
         status = MC_SERVER_UPDATING;
         if(serverConfig.getCategory().equals("vanilla")) {
-            updateVanillaServer(download, version);
+            updateVanillaServer(download, version, masterBackupDir);
         } else if(serverConfig.getCategory().contains("ATM9")) {
-            updateATM9Server(download, version);
+            updateATM9Server(download, version, masterBackupDir);
         }
     }
 
-    public void backupWorld(){
+    public void backupWorld(File masterBackupDir){
         log.debug("Backup up world " + serverProperties.get("level-name"));
-        File backupDir = new File(new File(filePath).getParentFile().getParentFile() + "/world backups/" + name);
+        File backupDir = new File(masterBackupDir.getAbsolutePath() + "/" + name);
         backupDir.mkdirs();
         String worldName = serverProperties.get("level-name");
         SimpleDateFormat format = new SimpleDateFormat("yy-MM-dd");
@@ -207,10 +207,10 @@ public class MinecraftServer {
         zip(filePath + "/" + worldName, backupDest.getPath());
     }
 
-    private void updateATM9Server(String download, String version){
+    private void updateATM9Server(String download, String version, File masterBackupDir){
         new Thread(() -> {
             updateMessage("Backing up world", 0.0);
-            backupWorld();
+            backupWorld(masterBackupDir);
             File serverDir = new File(filePath);
             File tempDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-temp");
             File backDir = new File(serverDir.getParentFile().getParentFile().getPath() + "/temp/" + name + "-backup");
@@ -280,13 +280,13 @@ public class MinecraftServer {
         }, "Update").start();
     }
 
-    private void updateVanillaServer(String download, String version){
+    private void updateVanillaServer(String download, String version, File masterBackupDir){
         new Thread(() -> {
             File loggerFile = new File(filePath + "\\msu_update.log");
             if(loggerFile.exists()) loggerFile.delete();
             SimpleLogger l = new SimpleLogger(loggerFile);
             l.info("Backing up world");
-            backupWorld();
+            backupWorld(masterBackupDir);
             File serverDir = new File(filePath);
             File serverJar = new File(filePath + "/server.jar");
             l.info("Deleting old jar");

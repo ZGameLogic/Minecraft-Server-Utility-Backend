@@ -43,6 +43,7 @@ import static com.zgamelogic.services.MinecraftService.downloadServer;
 public class MinecraftController {
 
     @Value("${curseforge.token}") private String curseforgeToken;
+    @Value("${backup.dir}") private String backupDir;
 
     private final static File SERVERS_DIR = new File("data/servers");
     private final HashMap<String, MinecraftServer> servers;
@@ -258,7 +259,7 @@ public class MinecraftController {
             @RequestHeader(name = "user", required=false) String id
     ){
         if(!userRepository.userHasPermission(id, updateCommand.getServer(), MC_ISSUE_COMMANDS_SERVER_PERMISSION)) return ResponseEntity.status(401).build();
-        servers.get(updateCommand.getServer()).updateServerVersion(updateCommand.getVersion(), serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl());
+        servers.get(updateCommand.getServer()).updateServerVersion(updateCommand.getVersion(), serverVersions.get(updateCommand.getCategory()).get(updateCommand.getVersion()).getUrl(), new File(backupDir));
         return ResponseEntity.status(200).build();
     }
 
@@ -269,7 +270,7 @@ public class MinecraftController {
             @RequestHeader(name = "user") String id
     ){
         if(!userRepository.userHasPermission(id, server, MC_EDIT_SERVER_PROPERTIES_PERMISSION)) return ResponseEntity.status(401).build();
-        new Thread(() -> servers.get(server).backupWorld(), "Backup world").start();
+        new Thread(() -> servers.get(server).backupWorld(new File(backupDir)), "Backup world").start();
         return ResponseEntity.status(200).build();
     }
 
@@ -348,7 +349,7 @@ public class MinecraftController {
             String cat = server.getServerConfig().getCategory();
             String ver = newestVersions.get(cat);
             String download = serverVersions.get(cat).get(ver).getUrl();
-            server.updateServerVersion(ver, download);
+            server.updateServerVersion(ver, download, new File(backupDir));
         });
     }
 
