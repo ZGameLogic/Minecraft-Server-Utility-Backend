@@ -203,7 +203,7 @@ public class MinecraftServer {
         SimpleDateFormat format = new SimpleDateFormat("yy-MM-dd");
         File backupDest = new File(backupDir + "/" + format.format(new Date()) + ".zip");
         int i = 0;
-        while(backupDest.exists()){backupDest = new File(backupDir + "/" + format.format(new Date()) + "-" + i + ".zip");}
+        while(backupDest.exists()) backupDest = new File(backupDir + "/" + format.format(new Date()) + "-" + (i++) + ".zip");
         zip(filePath + "/" + worldName, backupDest.getPath());
     }
 
