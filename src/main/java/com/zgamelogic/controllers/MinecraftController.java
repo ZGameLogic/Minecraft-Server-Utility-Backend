@@ -397,7 +397,7 @@ public class MinecraftController {
     private void serverPlayerNotification(String server, String player, boolean joined, LinkedList<String> online){
         String body = online.isEmpty() ? "No players are on " + server : "Players online: " + String.join(", ", online);
         ApplePushNotification notification = new ApplePushNotification(
-                player + (joined ? " has joined " + server : "has left " + server),
+                player + (joined ? " has joined " + server : " has left " + server),
                 body
         );
         userRepository.findAll().forEach(user -> {

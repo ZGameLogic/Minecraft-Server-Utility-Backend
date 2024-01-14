@@ -1,6 +1,7 @@
 package com.zgamelogic.data.services.minecraft;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.zgamelogic.data.minecraft.*;
@@ -193,6 +194,36 @@ public class MinecraftServer {
         } else if(serverConfig.getCategory().contains("ATM9")) {
             updateATM9Server(download, version, masterBackupDir);
         }
+    }
+
+    @JsonIgnore
+    public HashMap<String, String> getUsernameCache(){
+        File file = new File(filePath + "/usernamecache.json");
+        if(!file.exists()) return new HashMap<>();
+        try {
+            ObjectMapper om = new ObjectMapper();
+            return om.readValue(file, HashMap.class);
+        } catch (Exception e){
+            return new HashMap<>();
+        }
+    }
+
+    @JsonIgnore
+    public HashMap<String, JsonNode> getUserStats(){
+        String levelName = serverProperties.get("level-name");
+        File userStatsDir = new File(filePath + "/" + levelName + "/stats");
+        if(!userStatsDir.exists()) return new HashMap<>();
+
+        HashMap<String, JsonNode> stats = new HashMap<>();
+        ObjectMapper om = new ObjectMapper();
+        for(File userStatsFile: userStatsDir.listFiles()){
+            try {
+                stats.put(userStatsFile.getName().replace(".json", ""), om.readValue(userStatsFile, JsonNode.class));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return stats;
     }
 
     public void backupWorld(File masterBackupDir){
