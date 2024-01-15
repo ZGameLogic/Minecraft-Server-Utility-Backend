@@ -118,6 +118,7 @@ public class MinecraftServer {
                 status.equals(MC_SERVER_ONLINE) ||
                 status.equals(MC_SERVER_STOPPING) ||
                 status.equals(MC_SERVER_UPDATING)) return;
+        online = new LinkedList<>();
         status = MC_SERVER_STARTING;
         log.debug("Starting " + name);
         ProcessBuilder pb = new ProcessBuilder();
