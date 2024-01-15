@@ -246,6 +246,11 @@ public class MinecraftController {
             try {
                 editRunBat(runbat);
             } catch (FileNotFoundException ignored) {}
+        } else if (data.getCategory().contains("BigChadGuys")){
+            serverInstallAction(data.getName(), "Extracting server files");
+            unzipFile(serverDir + "/server.jar"); // unzip download
+            new File(serverDir + "/server.jar").delete(); // delete download
+            unfoldDir(findDir(serverDir)); // unfold download
         }
         servers.put(serverDir.getName(), new MinecraftServer(serverDir, this::serverMessageAction, this::serverStatusAction, this::serverPlayerAction, this::serverUpdateAction, this::serverPlayerNotification, this::serverStatusNotification));
         if(config.isAutoStart()) servers.get(data.getName()).startServer();
