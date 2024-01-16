@@ -93,6 +93,16 @@ public class MinecraftController {
     }
 
     @ResponseBody
+    @GetMapping("/count")
+    private int getTotalPlayerCount(){
+        int count = 0;
+        for(MinecraftServer server: servers.values()){
+            count += server.getPlayersOnline();
+        }
+        return count;
+    }
+
+    @ResponseBody
     @GetMapping("/servers/{server}")
     private ResponseEntity<MinecraftServer> getServer(@PathVariable String server){
         if(!servers.containsKey(server)) return ResponseEntity.status(404).build();
