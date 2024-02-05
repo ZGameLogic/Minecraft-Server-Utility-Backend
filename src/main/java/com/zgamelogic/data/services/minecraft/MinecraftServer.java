@@ -74,7 +74,7 @@ public class MinecraftServer {
         this.playerNotification = playerNotification;
         this.statusNotificationAction = statusNotificationAction;
         status = MC_SERVER_OFFLINE;
-        serverWatch();
+        notificationWatch();
         online = new LinkedList<>();
         serverProperties = new HashMap<>();
         loadServerProperties();
@@ -135,6 +135,7 @@ public class MinecraftServer {
             processOutput = new BufferedReader(new InputStreamReader(serverProcess.getInputStream()));
             processErrorOutput = new BufferedReader(new InputStreamReader(serverProcess.getErrorStream()));
             processInput = new PrintStream(serverProcess.getOutputStream());
+            serverWatch();
         } catch (IOException e) {
             log.error("Unable to start server process", e);
         }
@@ -382,6 +383,9 @@ public class MinecraftServer {
             }
             online.clear();
         }, name + " watch").start();
+    }
+
+    private void notificationWatch(){
         new Thread(() -> { // Thread for watching server status.
             socketActions.getStatusAction().action(name, status);
             statusNotificationAction.action(name, status);
